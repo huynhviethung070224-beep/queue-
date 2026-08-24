@@ -4,7 +4,7 @@ A mobile-first queue and three-court management application for a small badminto
 
 ## Current status
 
-Phase 1 is implemented: the React interface, routes, local mock interactions, documentation, test setup, linting, and production build are available. No Supabase project or real authentication is connected yet. All displayed names, court states, and admin actions are mock data held in browser memory.
+Phase 2 is implemented: the React mock interface remains in place, and the repository now includes a typed Supabase client foundation plus append-only migrations for the schema, RLS, restricted grants, seeded courts, and atomic state-change RPC functions. No real Supabase project is connected yet, and the UI does not call Supabase until later phases.
 
 ## Stack
 
@@ -15,8 +15,9 @@ Phase 1 is implemented: the React interface, routes, local mock interactions, do
 - Vitest, React Testing Library, and jsdom
 - ESLint
 - npm
+- Supabase JavaScript client and PostgreSQL migrations
 
-Supabase PostgreSQL, Auth, and Realtime will be added in later approved phases.
+Supabase Auth and Realtime UI flows will be connected in later approved phases.
 
 ## Local development
 
@@ -35,6 +36,7 @@ Open the local URL printed by Vite. The member interface is at `/`. Select **Adm
 npm run lint
 npm run typecheck
 npm run test
+npm run db:validate
 npm run build
 ```
 
@@ -67,4 +69,4 @@ Never place the Supabase service-role key in frontend code or a `VITE_` variable
 
 ## Important Phase 1 limitation
 
-The current `sessionStorage` admin preview is a UI demonstration only. It is not authorization. It must be replaced with Supabase Auth plus database authorization before the application can be used by a real club.
+The current `sessionStorage` admin preview is a UI demonstration only. It is not authorization. The Phase 2 database RPCs perform real authorization checks, but the preview interface will not use them until Phase 4.

@@ -23,6 +23,7 @@ npm run typecheck  # TypeScript project checks
 npm run test       # Vitest test suite once
 npm run test:watch # Vitest in watch mode
 npm run build      # Type checking plus production Vite build
+npm run db:validate # Static migration safety and completeness checks
 npm run preview    # Preview a completed production build
 ```
 
@@ -66,6 +67,7 @@ Run all four commands and report the actual results:
 npm run lint
 npm run typecheck
 npm run test
+npm run db:validate
 npm run build
 ```
 

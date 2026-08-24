@@ -34,6 +34,12 @@ Record the environment, browser, tester, date, and result when these checks beco
 
 ## Authorization after Phases 2 and 4
 
+- [ ] `npm run db:validate` reports 3 migrations, 9 RLS tables, and 12 state-change RPCs.
+- [ ] Applying all migrations to a new Supabase project succeeds in filename order.
+- [ ] The `courts` table contains only Court 1, Court 2, and Court 3.
+- [ ] The RLS audit query reports `rowsecurity = true` for all nine application tables.
+- [ ] The security-definer audit shows an empty `search_path` for every security-definer function.
+- [ ] `anon` and `authenticated` have no direct insert, update, or delete table privileges.
 - [ ] Anonymous member direct writes to protected tables fail.
 - [ ] Anonymous member calls to admin RPC functions fail.
 - [ ] A signed-in email/password user absent from `admin_users` remains unauthorized.
@@ -55,6 +61,7 @@ Record the environment, browser, tester, date, and result when these checks beco
 - [ ] `npm run lint`
 - [ ] `npm run typecheck`
 - [ ] `npm run test`
+- [ ] `npm run db:validate`
 - [ ] `npm run build`
 - [ ] Cloudflare Pages direct refresh works on `/admin`.
 - [ ] Production Supabase redirect URLs and origins are verified.

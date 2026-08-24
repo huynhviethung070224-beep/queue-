@@ -60,3 +60,16 @@ Skill does not improve priority. Recommendations prefer four players at the same
 - Major component states have automated tests.
 - Documentation clearly distinguishes current mock behavior from future production behavior.
 - Lint, type checking, tests, and production build pass.
+
+## Phase 2 acceptance criteria
+
+- A lazy, typed Supabase browser client exists without requiring real environment values during the mock phase.
+- Timestamped, append-only migrations define all required tables and status enums.
+- Exactly three courts are seeded and constrained to numbers 1 through 3.
+- Database constraints prevent multiple open sessions, duplicate active queue entries, duplicate active court matches, and players appearing in multiple active matches.
+- Deferred constraint triggers require exactly four distinct players in called, playing, and completed matches.
+- Every exposed application table has RLS enabled and client roles receive no direct write grants.
+- Anonymous and permanent Supabase users, both using the `authenticated` PostgreSQL role, can read only sanitized club state and their own private identity mapping.
+- Admin authority comes only from `admin_users` and is rechecked by every admin RPC.
+- Member joins/leaves and all admin state transitions use security-definer RPC functions with an empty `search_path`, input validation, and row locking.
+- No Auth UUID is stored in tables exposed as shared live club state.

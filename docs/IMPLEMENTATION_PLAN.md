@@ -28,18 +28,21 @@ This is the running project checklist. Work only on an explicitly approved phase
 - [x] Create required repository documentation and `AGENTS.md`.
 - [x] Add major UI-state tests.
 - [x] Run and pass final lint, type checking, test, and production build checks.
-- [ ] Stop and receive approval for Phase 2.
+- [x] Stop and receive approval for Phase 2.
 
 ## Phase 2 — Database and security
 
-- [ ] Add Supabase browser client setup and generated database-facing types.
-- [ ] Create timestamped schema migrations.
-- [ ] Add enums, tables, constraints, partial indexes, and the three court seeds.
-- [ ] Add RLS policies and restricted grants.
-- [ ] Add member and admin authorization helpers.
-- [ ] Add atomic RPC functions with row locking.
-- [ ] Document and verify initial Supabase/admin setup without real secrets.
-- [ ] Run available checks and stop.
+- [x] Add Supabase browser client setup and generated database-facing types.
+- [x] Create timestamped schema migrations.
+- [x] Add enums, tables, constraints, partial indexes, and the three court seeds.
+- [x] Add RLS policies and restricted grants.
+- [x] Add member and admin authorization helpers.
+- [x] Add atomic RPC functions with row locking.
+- [x] Document initial Supabase/admin setup without real secrets.
+- [x] Run database validation and all repository checks, then stop.
+- [ ] Stop and receive approval for Phase 3.
+
+Deferred owner activation (does not block Phase 2 repository completion): apply the migrations to a user-created Supabase project and complete the documented manual security checks before live integration or production use.
 
 ## Phase 3 — Member flow and Realtime
 
