@@ -35,7 +35,8 @@ export function AppShell() {
 
           <div className="flex items-center gap-2">
             <span className="hidden items-center gap-2 text-xs font-medium text-emerald-300 sm:flex">
-              <Wifi aria-hidden="true" size={15} /> Live preview
+              <Wifi aria-hidden="true" size={15} />{' '}
+              {isAdmin ? 'Secure admin controls' : 'Live member queue'}
             </span>
             <Link
               to={isAdmin ? '/' : '/admin/login'}
@@ -50,7 +51,8 @@ export function AppShell() {
 
       <main
         id="main-content"
-        className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-7xl px-4 py-6 focus:outline-none sm:px-6 sm:py-8 lg:px-8"
       >
         <Outlet />
       </main>
@@ -58,7 +60,11 @@ export function AppShell() {
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <span>{APP_CONFIG.clubName} · Fair court time for everyone</span>
-          <span>Phase 1 interface preview · No live data connected</span>
+          <span>
+            {isAdmin
+              ? 'Admin access verified by Supabase and PostgreSQL'
+              : 'Member data powered by Supabase'}
+          </span>
         </div>
       </footer>
     </div>

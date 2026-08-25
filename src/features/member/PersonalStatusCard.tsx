@@ -5,14 +5,16 @@ import type { QueuePlayer } from '../../types/domain'
 
 interface PersonalStatusCardProps {
   player: QueuePlayer
-  position: number
+  position: number | null
   onLeave?: () => void
+  leaveDisabled?: boolean
 }
 
 export function PersonalStatusCard({
   player,
   position,
   onLeave,
+  leaveDisabled = false,
 }: PersonalStatusCardProps) {
   const isCalled = player.status === 'called'
   const isPlaying = player.status === 'playing'
@@ -55,7 +57,9 @@ export function PersonalStatusCard({
         <dl className="mt-6 grid grid-cols-3 divide-x divide-slate-200 rounded-xl bg-slate-50 py-4 text-center">
           <div className="px-2">
             <dt className="text-xs text-slate-500">Position</dt>
-            <dd className="mt-1 text-lg font-bold text-navy-950">#{position}</dd>
+            <dd className="mt-1 text-lg font-bold text-navy-950">
+              {position ? `#${position}` : '—'}
+            </dd>
           </div>
           <div className="px-2">
             <dt className="flex items-center justify-center gap-1 text-xs text-slate-500">
@@ -76,7 +80,12 @@ export function PersonalStatusCard({
         </dl>
 
         {player.status === 'waiting' && onLeave && (
-          <Button variant="secondary" onClick={onLeave} className="mt-5 w-full sm:w-auto">
+          <Button
+            variant="secondary"
+            onClick={onLeave}
+            disabled={leaveDisabled}
+            className="mt-5 w-full sm:w-auto"
+          >
             Leave queue
           </Button>
         )}

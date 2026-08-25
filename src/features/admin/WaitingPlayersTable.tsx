@@ -9,6 +9,7 @@ interface WaitingPlayersTableProps {
   onToggle: (playerId: string) => void
   onEdit: (player: QueuePlayer) => void
   onRemove: (player: QueuePlayer) => void
+  disabled?: boolean
 }
 
 export function WaitingPlayersTable({
@@ -17,6 +18,7 @@ export function WaitingPlayersTable({
   onToggle,
   onEdit,
   onRemove,
+  disabled: actionsDisabled = false,
 }: WaitingPlayersTableProps) {
   return (
     <section className="card overflow-hidden" aria-labelledby="waiting-players-title">
@@ -32,6 +34,12 @@ export function WaitingPlayersTable({
         </span>
       </div>
 
+      {players.length === 0 ? (
+        <div className="px-5 py-10 text-center text-sm text-slate-500">
+          No members are waiting in the current session.
+        </div>
+      ) : (
+        <>
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -47,7 +55,7 @@ export function WaitingPlayersTable({
           <tbody className="divide-y divide-slate-100">
             {players.map((player, index) => {
               const selected = selectedIds.has(player.id)
-              const disabled = selectedIds.size === 4 && !selected
+              const disabled = actionsDisabled || (selectedIds.size === 4 && !selected)
               return (
                 <tr key={player.id} className={selected ? 'bg-emerald-50/60' : 'bg-white'}>
                   <td className="px-5 py-4 sm:px-6">
@@ -69,10 +77,10 @@ export function WaitingPlayersTable({
                   <td className="px-4 py-4 text-slate-600">{player.gamesPlayed}</td>
                   <td className="px-5 py-4 sm:px-6">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" className="min-h-10 px-3" onClick={() => onEdit(player)} aria-label={`Edit ${player.displayName}`}>
+                      <Button disabled={actionsDisabled} variant="ghost" className="min-h-10 px-3" onClick={() => onEdit(player)} aria-label={`Edit ${player.displayName}`}>
                         <Pencil aria-hidden="true" size={16} />
                       </Button>
-                      <Button variant="ghost" className="min-h-10 px-3 text-red-700" onClick={() => onRemove(player)} aria-label={`Remove ${player.displayName}`}>
+                      <Button disabled={actionsDisabled} variant="ghost" className="min-h-10 px-3 text-red-700" onClick={() => onRemove(player)} aria-label={`Remove ${player.displayName}`}>
                         <Trash2 aria-hidden="true" size={16} />
                       </Button>
                     </div>
@@ -87,7 +95,7 @@ export function WaitingPlayersTable({
       <ul className="divide-y divide-slate-100 md:hidden">
         {players.map((player, index) => {
           const selected = selectedIds.has(player.id)
-          const disabled = selectedIds.size === 4 && !selected
+          const disabled = actionsDisabled || (selectedIds.size === 4 && !selected)
           return (
             <li key={player.id} className={`p-4 ${selected ? 'bg-emerald-50/60' : 'bg-white'}`}>
               <div className="flex items-start gap-3">
@@ -109,10 +117,10 @@ export function WaitingPlayersTable({
                   </p>
                 </div>
                 <div className="flex">
-                  <Button variant="ghost" className="min-h-10 px-2" onClick={() => onEdit(player)} aria-label={`Edit ${player.displayName}`}>
+                  <Button disabled={actionsDisabled} variant="ghost" className="min-h-10 px-2" onClick={() => onEdit(player)} aria-label={`Edit ${player.displayName}`}>
                     <Pencil aria-hidden="true" size={16} />
                   </Button>
-                  <Button variant="ghost" className="min-h-10 px-2 text-red-700" onClick={() => onRemove(player)} aria-label={`Remove ${player.displayName}`}>
+                  <Button disabled={actionsDisabled} variant="ghost" className="min-h-10 px-2 text-red-700" onClick={() => onRemove(player)} aria-label={`Remove ${player.displayName}`}>
                     <Trash2 aria-hidden="true" size={16} />
                   </Button>
                 </div>
@@ -121,6 +129,8 @@ export function WaitingPlayersTable({
           )
         })}
       </ul>
+        </>
+      )}
     </section>
   )
 }

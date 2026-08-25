@@ -1,7 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../types/database'
 
-let client: SupabaseClient<Database> | null = null
+let memberClient: SupabaseClient<Database> | null = null
+let adminClient: SupabaseClient<Database> | null = null
 
 export function isSupabaseConfigured() {
   return Boolean(
@@ -10,9 +11,7 @@ export function isSupabaseConfigured() {
   )
 }
 
-export function getSupabaseClient(): SupabaseClient<Database> {
-  if (client) return client
-
+function getPublicConfiguration() {
   const url = import.meta.env.VITE_SUPABASE_URL?.trim()
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim()
 
@@ -22,13 +21,31 @@ export function getSupabaseClient(): SupabaseClient<Database> {
     )
   }
 
-  client = createClient<Database>(url, anonKey, {
+  return { url, anonKey }
+}
+
+function createBrowserClient(storageKey: string) {
+  const { url, anonKey } = getPublicConfiguration()
+  return createClient<Database>(url, anonKey, {
     auth: {
       autoRefreshToken: true,
       detectSessionInUrl: true,
       persistSession: true,
+      storageKey,
     },
   })
+}
 
-  return client
+export function getSupabaseClient(): SupabaseClient<Database> {
+  if (!memberClient) {
+    memberClient = createBrowserClient('fairplay-member-auth')
+  }
+  return memberClient
+}
+
+export function getSupabaseAdminClient(): SupabaseClient<Database> {
+  if (!adminClient) {
+    adminClient = createBrowserClient('fairplay-admin-auth')
+  }
+  return adminClient
 }

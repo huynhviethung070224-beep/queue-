@@ -1,6 +1,6 @@
 # Supabase Setup
 
-Phase 2 provides the browser client foundation and SQL migrations, but this repository is not connected to a real Supabase project. The following steps are manual and require the club owner's Supabase access.
+Phase 6 retains the browser client, member/admin integration, Realtime publication migration, database migrations, and security/concurrency review. The current local checkout is linked to the owner's test project, but the repository contains no project reference, private credential, admin UUID, or password. These setup steps remain the reproducible procedure for a new preview or production project and require the club owner's Supabase access.
 
 ## 1. Create the project
 
@@ -26,6 +26,9 @@ Migrations are append-only and must run in filename order:
 1. `20260824100000_initial_schema.sql`
 2. `20260824101000_rls_and_privileges.sql`
 3. `20260824102000_state_transition_functions.sql`
+4. `20260824103000_enable_member_realtime.sql`
+5. `20260825150000_grant_rls_helper_execution.sql`
+6. `20260825153000_fix_join_queue_conflict_target.sql`
 
 ### Recommended CLI method
 
@@ -46,7 +49,7 @@ npx supabase gen types typescript --linked > src/types/database.ts
 npm run typecheck
 ```
 
-The Phase 2 type file currently mirrors the migration schema. Regeneration becomes the authoritative check after a real project exists.
+The checked-in type file currently mirrors the migration schema. Regeneration becomes the authoritative check after a real project exists.
 
 ### Dashboard alternative
 
@@ -131,7 +134,7 @@ VITE_SUPABASE_ANON_KEY=YOUR_PUBLIC_BROWSER_KEY
 
 The environment variable remains named `VITE_SUPABASE_ANON_KEY` to match the approved project specification. Never use the service-role key in a browser variable. Any variable prefixed with `VITE_` is included in client-side build output.
 
-Run the existing Phase 2 checks:
+Run the repository checks:
 
 ```bash
 npm run db:validate
@@ -141,7 +144,18 @@ npm run test
 npm run build
 ```
 
-The Phase 2 UI still uses mock state. Supplying environment values only makes `getSupabaseClient()` ready for Phase 3; it does not yet replace the mock flows.
+Both member and admin routes use the configured project immediately. The admin account must be an email/password Auth user whose UUID is also present in `admin_users`.
+
+Confirm that the seven member-visible live tables were added to the Realtime publication:
+
+```sql
+select schemaname, tablename
+from pg_catalog.pg_publication_tables
+where pubname = 'supabase_realtime'
+order by schemaname, tablename;
+```
+
+The result must include `club_sessions`, `players`, `session_players`, `queue_entries`, `courts`, `matches`, and `match_players`. It must not include `player_identities` or `admin_users` because those tables contain authorization-sensitive mappings.
 
 ## 7. Verify function security
 
@@ -178,7 +192,7 @@ order by grantee, table_name, privilege_type;
 
 The query must return zero rows for the application tables.
 
-After Phase 3 creates an anonymous session, verify that anonymous member credentials can call `join_current_queue` and `leave_current_queue` but receive `Admin authorization is required` from admin RPCs. Also verify direct inserts or updates fail with permission errors.
+After the member route creates an anonymous session, verify that anonymous member credentials can call `join_current_queue` and `leave_current_queue` but receive `Admin authorization is required` from admin RPCs. Also verify direct inserts or updates fail with permission errors.
 
 ## 8. Paused free project recovery
 
@@ -189,7 +203,7 @@ If a free Supabase project pauses:
 3. Do not reapply successful migrations.
 4. Run the read-only schema/RLS audits above.
 5. Restart the local app if environment values changed.
-6. During Phase 3, reconnecting clients must refetch authoritative state rather than relying on missed Realtime events.
+6. Confirm that reconnecting member and admin clients refetch authoritative state rather than relying on missed Realtime events.
 
 ## Secrets checklist
 

@@ -24,6 +24,8 @@ npm run test       # Vitest test suite once
 npm run test:watch # Vitest in watch mode
 npm run build      # Type checking plus production Vite build
 npm run db:validate # Static migration safety and completeness checks
+npm run deployment:validate # CI, Node 24, SPA fallback, and dist checks
+npm run security:scan-build # Scan dist for private credential patterns
 npm run preview    # Preview a completed production build
 ```
 
@@ -32,6 +34,10 @@ npm run preview    # Preview a completed production build
 - Keep TypeScript strict. Do not bypass type errors with `any` or unsafe assertions.
 - Prefer small, named components and pure functions over giant page components.
 - Keep domain behavior inside its feature folder; keep pages focused on composition.
+- Keep Supabase member access behind `MemberService`; Realtime events invalidate and refetch snapshots rather than directly mutating authoritative client state.
+- Keep Supabase admin Auth, reads, RPC calls, and Realtime access behind `AdminService`; UI route guards are usability controls, while PostgreSQL admin checks remain authoritative.
+- Keep fairness and automatic group-selection rules pure and deterministic in `src/features/queue/fairness.ts`. Member/admin sorting and recommendation UI must call that shared source of truth rather than copy its comparator.
+- An automatic recommendation must contain the highest-priority waiting player, must never combine beginner with advanced, and must return `null` instead of bypassing that player for a later compatible group. Manual admin overrides must remain visibly labeled.
 - Use semantic HTML, explicit labels, visible focus states, and comfortable touch targets.
 - Do not use color as the only status indicator.
 - Use Lucide for interface icons. Do not add a large UI component library.
@@ -61,7 +67,7 @@ npm run preview    # Preview a completed production build
 
 ## Checks required before completion
 
-Run all four commands and report the actual results:
+Run the complete verification sequence and report the actual results:
 
 ```bash
 npm run lint
@@ -69,6 +75,8 @@ npm run typecheck
 npm run test
 npm run db:validate
 npm run build
+npm run deployment:validate
+npm run security:scan-build
 ```
 
 Also verify the relevant items in `docs/MANUAL_TEST_CHECKLIST.md`. Do not claim that a check passed unless it was run.

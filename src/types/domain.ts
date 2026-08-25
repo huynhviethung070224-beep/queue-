@@ -10,6 +10,7 @@ export interface QueuePlayer {
   duplicateSuffix?: string
   skillLevel: SkillLevel
   gamesPlayed: number
+  lastMatchEndedAt?: string | null
   queuedAt: string
   waitMinutes: number
   status: QueueStatus

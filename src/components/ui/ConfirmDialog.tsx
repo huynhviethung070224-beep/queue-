@@ -1,4 +1,6 @@
 import { AlertTriangle } from 'lucide-react'
+import { useRef } from 'react'
+import { useDialogFocus } from '../../hooks/useDialogFocus'
 import { Button } from './Button'
 
 interface ConfirmDialogProps {
@@ -9,6 +11,7 @@ interface ConfirmDialogProps {
   danger?: boolean
   onCancel: () => void
   onConfirm: () => void
+  pending?: boolean
 }
 
 export function ConfirmDialog({
@@ -19,12 +22,18 @@ export function ConfirmDialog({
   danger = false,
   onCancel,
   onConfirm,
+  pending = false,
 }: ConfirmDialogProps) {
+  const dialogRef = useRef<HTMLElement>(null)
+  const cancelButtonRef = useRef<HTMLButtonElement>(null)
+  useDialogFocus(dialogRef, cancelButtonRef, onCancel, pending, open)
+
   if (!open) return null
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-navy-950/60 p-4">
       <section
+        ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
@@ -41,11 +50,11 @@ export function ConfirmDialog({
           {description}
         </p>
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="secondary" onClick={onCancel}>
+          <Button ref={cancelButtonRef} disabled={pending} variant="secondary" onClick={onCancel}>
             Keep current state
           </Button>
-          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm}>
-            {confirmLabel}
+          <Button disabled={pending} variant={danger ? 'danger' : 'primary'} onClick={onConfirm}>
+            {pending ? 'Working…' : confirmLabel}
           </Button>
         </div>
       </section>

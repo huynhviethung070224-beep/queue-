@@ -1,4 +1,5 @@
 import { Clock3, MapPin, Users } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import type { Court } from '../../types/domain'
 
@@ -7,6 +8,26 @@ interface CourtCardProps {
 }
 
 export function CourtCard({ court }: CourtCardProps) {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+
+  useEffect(() => {
+    if (court.status !== 'playing' || !court.matchStartedAt) return
+    const updateElapsed = () => {
+      setElapsedSeconds(
+        Math.max(
+          0,
+          Math.floor((Date.now() - new Date(court.matchStartedAt!).getTime()) / 1_000),
+        ),
+      )
+    }
+    const initialTimer = window.setTimeout(updateElapsed, 0)
+    const interval = window.setInterval(updateElapsed, 1_000)
+    return () => {
+      window.clearTimeout(initialTimer)
+      window.clearInterval(interval)
+    }
+  }, [court.matchStartedAt, court.status])
+
   return (
     <article className="card p-5" aria-label={`${court.name}: ${court.status}`}>
       <div className="flex items-start justify-between gap-3">
@@ -32,9 +53,10 @@ export function CourtCard({ court }: CourtCardProps) {
         <p className="mt-5 text-sm text-slate-500">Ready for the next group of four.</p>
       )}
 
-      {court.status === 'playing' && (
+      {court.status === 'playing' && court.matchStartedAt && (
         <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-fuchsia-700">
-          <Clock3 aria-hidden="true" size={16} /> 19m 24s elapsed
+          <Clock3 aria-hidden="true" size={16} /> {Math.floor(elapsedSeconds / 60)}m{' '}
+          {elapsedSeconds % 60}s elapsed
         </p>
       )}
 

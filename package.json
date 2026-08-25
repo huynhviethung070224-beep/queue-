@@ -3,11 +3,17 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=11 <12"
+  },
   "scripts": {
     "dev": "vite",
     "build": "npm run typecheck && vite build",
     "db:validate": "node scripts/validate-migrations.mjs",
+    "deployment:validate": "node scripts/validate-deployment.mjs",
     "lint": "eslint . --max-warnings=0",
+    "security:scan-build": "node scripts/scan-build-secrets.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -b",

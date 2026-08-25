@@ -16,20 +16,35 @@ React + React Router
          └── atomic match transitions
 ```
 
-## Current Phase 2 architecture
+## Current Phase 6 architecture
 
 - Route composition lives in `src/App.tsx`.
 - Shared header/footer layout lives in `src/components/layout`.
 - Reusable visual primitives live in `src/components/ui`.
 - Member, admin, court, auth, and queue modules live in `src/features`.
-- Mock domain records live in `src/features/queue/mockData.ts`.
+- Mock domain records remain only as Phase 1 fixtures and are not runtime sources of truth.
 - Domain types live in `src/types/domain.ts`.
 - Supabase-generated-shape database types live in `src/types/database.ts`.
-- `src/lib/supabase.ts` creates a typed browser client lazily after both public environment values are present.
+- `src/lib/supabase.ts` lazily creates typed member and admin browser clients with separate Auth storage keys, so staff sign-in cannot replace an anonymous member identity in the same browser.
+- `src/features/member/memberService.ts` owns member Auth, reads, RPC calls, mapping, and one focused Realtime channel behind a mockable interface.
+- `src/features/member/useMemberQueue.ts` owns loading/action state, subscription cleanup, offline detection, reconnect refetching, and live wait-time display.
+- `src/features/admin/adminService.ts` owns email/password Auth, database membership checks, admin reads, RPC calls, data mapping, and one focused Realtime channel.
+- `src/features/auth/AdminAuthContext.tsx` restores the admin session, follows Auth events, and exposes protected-route state without treating client state as authorization.
+- `src/features/admin/useAdminDashboard.ts` owns authoritative admin snapshots, reconnect refreshes, feedback, and a synchronous duplicate-action guard.
+- `src/features/queue/fairness.ts` is the single pure, deterministic source for priority sorting, one-court recommendation, and non-overlapping multi-court recommendations.
+- Admin routes are lazy-loaded so the member entry bundle does not pay for protected dashboard code before navigation.
 - Timestamped SQL migrations live in `supabase/migrations` and must remain append-only after use.
-- `sessionStorage` protects the preview admin route only to demonstrate navigation. It is deliberately labeled as non-secure.
+- `.github/workflows/ci.yml` reproduces the locked Node.js 24 verification sequence without requiring Supabase credentials.
+- `public/_redirects` is copied into `dist` so Cloudflare Pages can serve `index.html` for direct React Router route refreshes.
+- Deployment validation checks CI commands, runtime pinning, and built artifacts; a separate scanner rejects private credential patterns in `dist` while allowing the public browser configuration required by Supabase.
 
-The current member and admin pages still use local React mock state. This is intentional: Phase 2 establishes the database and security boundary but does not start Phase 3 member integration or Phase 4 admin integration.
+Member and admin pages use Supabase as their source of truth when public environment values are configured. Without them they render explicit setup states rather than silently using mock records.
+
+## Fairness and compatibility algorithm
+
+The comparator orders waiting records by games played, never-played status, earlier previous-match end time, earlier queue time, and stable ID. Skill never changes that base priority. A recommendation is valid only when it contains the highest-priority waiting player; the algorithm returns `null` rather than starving that player for a later compatible group.
+
+The recommendation search prefers a four-player same-level combination. Its fallback accepts exactly two adjacent levels only when every player in one cohort crossing into the other level has waited at least the configured 15-minute threshold. Beginner and advanced are never automatically combined. Inputs are deduplicated without mutation, and the multi-court helper removes each selected ID before finding the next group.
 
 ## Database model
 
@@ -96,7 +111,17 @@ Assignments and match transitions lock the session, court, match, queue, and pla
 
 ## Realtime boundaries
 
-One owner per resource will subscribe only to the active session, its queue entries, active matches, and the three courts. Feature hooks will clean up channels when unmounted. Authentication identities and unrelated historical records are not subscription targets.
+The member service owns one channel. It listens to club sessions, courts, visible player records, and session-filtered queue/session-player/match records. Database events invalidate the local snapshot; they are not merged into it. The hook refetches authoritative state after events, the initial subscription, and browser reconnect, and removes the channel on cleanup. Authentication identities and admin records are not publication or subscription targets.
+
+The admin service uses the same invalidation/refetch rule with its own single active-session channel. Auth events use a separate Supabase Auth subscription. Both subscriptions have one owner and explicit cleanup; neither subscribes to `admin_users` or `player_identities`.
+
+## Admin authentication and actions
+
+1. Supabase Auth restores or accepts an email/password session.
+2. The client calls `is_current_user_admin()` before rendering protected controls.
+3. A non-admin session is rejected and locally signed out after a login attempt.
+4. Every mutation still calls a security-definer RPC that independently executes `private.require_admin()`; the route guard is not the security boundary.
+5. The UI permits one pending mutation at a time, disables mutations while offline/reconnecting, and refetches after success.
 
 ## Testing strategy
 
@@ -104,6 +129,10 @@ One owner per resource will subscribe only to the active session, its queue entr
 - React Testing Library tests for member, admin, error, and route states.
 - Database tests/manual SQL checks for RLS, constraints, RPC authorization, and atomicity.
 - Manual concurrency and reconnect checks.
+
+The repository validator also checks that every admin state-change RPC calls `private.require_admin()`, member mutations require authentication, assignment retains its row locks, required active-state unique indexes exist, and clients cannot directly select `admin_users`. Detailed lock and manual scenario evidence is recorded in `docs/CONCURRENCY_REVIEW.md`.
+
+CI performs the same locked install, lint, type, unit/component, migration, build, deployment-artifact, and bundle-secret checks used locally. It does not receive database credentials and therefore cannot replace the documented live Supabase or two-browser release checks.
 
 ## Deliberately excluded
 

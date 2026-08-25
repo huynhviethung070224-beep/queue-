@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getSupabaseClient, isSupabaseConfigured } from './supabase'
+import {
+  getSupabaseAdminClient,
+  getSupabaseClient,
+  isSupabaseConfigured,
+} from './supabase'
 
 describe('Supabase client foundation', () => {
   afterEach(() => {
@@ -14,5 +18,12 @@ describe('Supabase client foundation', () => {
     expect(() => getSupabaseClient()).toThrow(
       'Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local.',
     )
+  })
+
+  it('uses separate browser clients so admin login cannot replace member identity', () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'public-test-key')
+
+    expect(getSupabaseAdminClient()).not.toBe(getSupabaseClient())
   })
 })

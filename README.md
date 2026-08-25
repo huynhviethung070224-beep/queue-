@@ -4,7 +4,7 @@ A mobile-first queue and three-court management application for a small badminto
 
 ## Current status
 
-Phase 2 is implemented: the React mock interface remains in place, and the repository now includes a typed Supabase client foundation plus append-only migrations for the schema, RLS, restricted grants, seeded courts, and atomic state-change RPC functions. No real Supabase project is connected yet, and the UI does not call Supabase until later phases.
+Phase 6 deployment readiness is implemented locally. Members use anonymous Supabase Auth, and administrators use email/password Auth plus database allowlist authorization. Member and admin state comes from PostgreSQL, mutations use the security-definer RPC surface, and focused Realtime events trigger authoritative refetches. Pure TypeScript recommendations apply session fairness before skill compatibility. GitHub Actions, Node.js 24 pinning, Cloudflare Pages SPA artifacts, deployment validation, and production-bundle credential scanning are configured. No private Supabase credential or admin account detail is included in the repository.
 
 ## Stack
 
@@ -17,7 +17,7 @@ Phase 2 is implemented: the React mock interface remains in place, and the repos
 - npm
 - Supabase JavaScript client and PostgreSQL migrations
 
-Supabase Auth and Realtime UI flows will be connected in later approved phases.
+The repository is ready for a separately authorized commit, push, and Cloudflare Pages setup. No commit, push, or deployment was performed as part of Phase 6.
 
 ## Local development
 
@@ -28,7 +28,7 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. The member interface is at `/`. Select **Admin** in the header to open the preview admin login. The prefilled preview values are intentionally not real credentials.
+Open the local URL printed by Vite. The member interface is at `/`; select **Admin** for the protected dashboard. Both live routes require the public Supabase environment values and the manual project setup described below.
 
 ## Required checks
 
@@ -38,11 +38,13 @@ npm run typecheck
 npm run test
 npm run db:validate
 npm run build
+npm run deployment:validate
+npm run security:scan-build
 ```
 
 ## Environment variables
 
-Copy `.env.example` to `.env.local` only when Supabase work begins. Never commit `.env.local` or real keys. The future frontend is allowed to contain only:
+Copy `.env.example` to `.env.local` when manually connecting a Supabase project. Never commit `.env.local` or real keys. The frontend is allowed to contain only:
 
 ```text
 VITE_SUPABASE_URL
@@ -54,8 +56,8 @@ Never place the Supabase service-role key in frontend code or a `VITE_` variable
 ## Routes
 
 - `/` — member queue
-- `/admin/login` — admin login preview
-- `/admin` — mock-protected admin dashboard
+- `/admin/login` — Supabase email/password administrator login
+- `/admin` — database-authorized admin dashboard
 - Any unmatched path — not-found page
 
 ## Documentation
@@ -66,7 +68,8 @@ Never place the Supabase service-role key in frontend code or a `VITE_` variable
 - [Supabase setup](docs/SUPABASE_SETUP.md)
 - [Deployment](docs/DEPLOYMENT.md)
 - [Manual test checklist](docs/MANUAL_TEST_CHECKLIST.md)
+- [Security and concurrency review](docs/CONCURRENCY_REVIEW.md)
 
-## Important Phase 1 limitation
+## Current limitations
 
-The current `sessionStorage` admin preview is a UI demonstration only. It is not authorization. The Phase 2 database RPCs perform real authorization checks, but the preview interface will not use them until Phase 4.
+The linked test project has one authorized admin, so the two-admin race scenarios and the multi-court completion race remain manual release checks. Cloudflare Pages settings, production/preview variables, deployed route refreshes, and final Supabase production URLs also require account access after explicit deployment authorization. Follow `docs/CONCURRENCY_REVIEW.md` and `docs/DEPLOYMENT.md` before production use.

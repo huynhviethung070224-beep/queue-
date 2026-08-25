@@ -1,14 +1,44 @@
 import { Clock3, MapPin } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/ui/StatusBadge'
-import type { Court } from '../../types/domain'
+import type { AdminCourt } from './adminService'
 
 interface AdminCourtCardProps {
-  court: Court
-  onAction: (court: Court, action: 'start' | 'cancel' | 'end' | 'toggle') => void
+  court: AdminCourt
+  disabled?: boolean
+  onAction: (
+    court: AdminCourt,
+    action: 'start' | 'cancel' | 'end' | 'toggle',
+  ) => void
 }
 
-export function AdminCourtCard({ court, onAction }: AdminCourtCardProps) {
+export function AdminCourtCard({
+  court,
+  disabled = false,
+  onAction,
+}: AdminCourtCardProps) {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+
+  useEffect(() => {
+    const matchStartedAt = court.matchStartedAt
+    if (court.status !== 'playing' || !matchStartedAt) return
+    const updateElapsed = () => {
+      setElapsedSeconds(
+        Math.max(
+          0,
+          Math.floor((Date.now() - new Date(matchStartedAt).getTime()) / 1_000),
+        ),
+      )
+    }
+    const initialTimer = window.setTimeout(updateElapsed, 0)
+    const interval = window.setInterval(updateElapsed, 1_000)
+    return () => {
+      window.clearTimeout(initialTimer)
+      window.clearInterval(interval)
+    }
+  }, [court.matchStartedAt, court.status])
+
   return (
     <article className="card p-5">
       <div className="flex items-start justify-between gap-3">
@@ -25,7 +55,8 @@ export function AdminCourtCard({ court, onAction }: AdminCourtCardProps) {
         {court.playerNames ? court.playerNames.join(' · ') : 'No active match'}
         {court.status === 'playing' && (
           <span className="mt-2 flex items-center gap-1.5 font-semibold text-fuchsia-700">
-            <Clock3 aria-hidden="true" size={15} /> 19m 24s elapsed
+            <Clock3 aria-hidden="true" size={15} /> {Math.floor(elapsedSeconds / 60)}m{' '}
+            {elapsedSeconds % 60}s elapsed
           </span>
         )}
       </div>
@@ -33,15 +64,15 @@ export function AdminCourtCard({ court, onAction }: AdminCourtCardProps) {
       <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
         {court.status === 'called' && (
           <>
-            <Button className="flex-1" onClick={() => onAction(court, 'start')}>Start</Button>
-            <Button variant="secondary" className="flex-1" onClick={() => onAction(court, 'cancel')}>Cancel</Button>
+            <Button disabled={disabled} className="flex-1" onClick={() => onAction(court, 'start')}>Start</Button>
+            <Button disabled={disabled} variant="secondary" className="flex-1" onClick={() => onAction(court, 'cancel')}>Cancel</Button>
           </>
         )}
         {court.status === 'playing' && (
-          <Button className="w-full" onClick={() => onAction(court, 'end')}>End match</Button>
+          <Button disabled={disabled} className="w-full" onClick={() => onAction(court, 'end')}>End match</Button>
         )}
         {(court.status === 'available' || court.status === 'disabled') && (
-          <Button variant="secondary" className="w-full" onClick={() => onAction(court, 'toggle')}>
+          <Button disabled={disabled} variant="secondary" className="w-full" onClick={() => onAction(court, 'toggle')}>
             {court.status === 'disabled' ? 'Enable court' : 'Disable court'}
           </Button>
         )}
