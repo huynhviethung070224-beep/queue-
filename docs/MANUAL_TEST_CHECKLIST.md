@@ -74,7 +74,7 @@ Use the two-client procedure and expected database invariants in `CONCURRENCY_RE
 - [x] `npm run worker:dry-run`
 - [x] `npm run deployment:validate`
 - [x] `npm run security:scan-build`
-- [ ] Cloudflare Worker direct refresh works on `/admin`.
+- [x] Cloudflare Worker direct refresh works on `/admin`.
 - [ ] Production Supabase redirect URLs and origins are verified.
 
 ## Phase 5 repository review record
@@ -115,6 +115,8 @@ Completed on 2026-08-25 with Node.js 24 and npm 11:
 - [x] `wrangler.jsonc` targets `dist` with `single-page-application` fallback, no incompatible `_redirects` file is emitted, and the build contains the SPA entry, JavaScript, and CSS artifacts.
 - [x] The production bundle scan found no database URL/password, private key, Supabase secret key, or service-role JWT pattern.
 - [x] Wrangler dry-run accepts the `queue` Worker configuration and packages `dist` without the previous infinite-loop redirect error.
-- [ ] Cloudflare Worker deployment and direct-route refresh require verification after the routing fix is pushed.
+- [x] Cloudflare Worker deployment succeeds and direct refresh serves the SPA on `/`, `/admin/login`, `/admin`, and an unknown route.
+- [x] The deployed member route creates an anonymous Auth session, reads live state, denies an anonymous admin RPC, and recovers after an offline/reconnect cycle without baseline or post-reconnect browser errors.
+- [ ] Production and Preview Workers Build triggers still need `NODE_VERSION`, `VITE_SUPABASE_URL`, and `VITE_SUPABASE_ANON_KEY`; until then, a Git-triggered build can overwrite the configured direct deployment with an unconfigured bundle.
 - [ ] Production/preview Supabase Site URL and Redirect URLs still require the final deployed origins and Supabase account access.
 - [ ] Optional custom domain and TLS verification remain intentionally unstarted.
