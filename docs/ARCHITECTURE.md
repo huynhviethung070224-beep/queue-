@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a single React SPA deployed to Cloudflare Pages. It will communicate directly with Supabase Auth, PostgreSQL RPC functions, and Realtime. There is no custom Express server.
+This is a single React SPA deployed as Cloudflare Workers Static Assets. It communicates directly with Supabase Auth, PostgreSQL RPC functions, and Realtime. There is no custom Express server or application Worker code.
 
 ```text
 React + React Router
@@ -35,7 +35,7 @@ React + React Router
 - Admin routes are lazy-loaded so the member entry bundle does not pay for protected dashboard code before navigation.
 - Timestamped SQL migrations live in `supabase/migrations` and must remain append-only after use.
 - `.github/workflows/ci.yml` reproduces the locked Node.js 24 verification sequence without requiring Supabase credentials.
-- `public/_redirects` is copied into `dist` so Cloudflare Pages can serve `index.html` for direct React Router route refreshes.
+- `wrangler.jsonc` points Workers Static Assets at `dist` and uses `not_found_handling: single-page-application`, so direct React Router route refreshes serve `index.html`.
 - Deployment validation checks CI commands, runtime pinning, and built artifacts; a separate scanner rejects private credential patterns in `dist` while allowing the public browser configuration required by Supabase.
 
 Member and admin pages use Supabase as their source of truth when public environment values are configured. Without them they render explicit setup states rather than silently using mock records.

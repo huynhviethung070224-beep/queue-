@@ -24,7 +24,7 @@ This is the running project checklist. Work only on an explicitly approved phase
 - [x] Build responsive member join, personal status, queue, and court interfaces.
 - [x] Build responsive admin login and dashboard interfaces.
 - [x] Demonstrate selection, court lifecycle, session controls, edit/remove, and confirmations with local state.
-- [x] Add Cloudflare Pages SPA fallback file.
+- [x] Add the original Pages SPA fallback file (replaced by Workers SPA routing when the owner selected a Worker deployment in Phase 6).
 - [x] Create required repository documentation and `AGENTS.md`.
 - [x] Add major UI-state tests.
 - [x] Run and pass final lint, type checking, test, and production build checks.
@@ -79,10 +79,11 @@ The Phase 2 owner-activation step was later completed against the linked test pr
 ## Phase 6 — Deployment readiness
 
 - [x] Add GitHub Actions CI using Node.js 24, `npm ci`, and the complete repository verification sequence.
-- [x] Confirm the repository's Cloudflare Pages build output and SPA routing configuration.
+- [x] Confirm Cloudflare build output and SPA routing configuration for the connected Worker Static Assets target.
+- [x] Replace the incompatible Pages rewrite with Workers `single-page-application` routing and validate it with a Wrangler dry run.
 - [x] Complete production/preview environment, redirect URL, and optional custom-domain documentation.
 - [x] Add production-bundle private-credential scanning.
 - [x] Perform final code and manual checklist review.
 - [x] Run final checks and report remaining manual steps.
 - [x] Do not deploy, create a custom domain, commit, or push without explicit authorization and account access.
-- [ ] Receive separate explicit authorization for commit, push, and deployment.
+- [x] Receive separate explicit authorization for commit, push, and deployment.

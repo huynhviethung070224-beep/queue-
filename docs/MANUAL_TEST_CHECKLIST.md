@@ -71,9 +71,10 @@ Use the two-client procedure and expected database invariants in `CONCURRENCY_RE
 - [x] `npm run test`
 - [x] `npm run db:validate`
 - [x] `npm run build`
+- [x] `npm run worker:dry-run`
 - [x] `npm run deployment:validate`
 - [x] `npm run security:scan-build`
-- [ ] Cloudflare Pages direct refresh works on `/admin`.
+- [ ] Cloudflare Worker direct refresh works on `/admin`.
 - [ ] Production Supabase redirect URLs and origins are verified.
 
 ## Phase 5 repository review record
@@ -111,8 +112,9 @@ Completed on 2026-08-25 with Node.js 24 and npm 11:
 
 - [x] A clean `npm ci` completed with zero reported vulnerabilities.
 - [x] GitHub Actions uses Node.js 24, `npm ci`, all required code/database checks, the production build, deployment-artifact validation, and bundle scanning.
-- [x] `dist/_redirects` exactly matches `public/_redirects`, and the built output contains the SPA entry, JavaScript, and CSS artifacts.
+- [x] `wrangler.jsonc` targets `dist` with `single-page-application` fallback, no incompatible `_redirects` file is emitted, and the build contains the SPA entry, JavaScript, and CSS artifacts.
 - [x] The production bundle scan found no database URL/password, private key, Supabase secret key, or service-role JWT pattern.
-- [ ] Cloudflare account settings and a deployed direct-route refresh still require account access and explicit deployment authorization.
+- [x] Wrangler dry-run accepts the `queue` Worker configuration and packages `dist` without the previous infinite-loop redirect error.
+- [ ] Cloudflare Worker deployment and direct-route refresh require verification after the routing fix is pushed.
 - [ ] Production/preview Supabase Site URL and Redirect URLs still require the final deployed origins and Supabase account access.
 - [ ] Optional custom domain and TLS verification remain intentionally unstarted.

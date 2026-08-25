@@ -45,6 +45,9 @@ jobs:
       - name: Build production bundle
         run: npm run build
 
+      - name: Validate Cloudflare Worker package
+        run: npm run worker:dry-run
+
       - name: Validate deployment artifacts
         run: npm run deployment:validate
 

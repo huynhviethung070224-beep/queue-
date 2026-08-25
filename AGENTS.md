@@ -12,7 +12,8 @@ Guidance for anyone making automated or manual changes to Badminton FairPlay Que
 - `src/test`: global test setup
 - `supabase/migrations`: append-only PostgreSQL migrations, beginning in Phase 2
 - `docs`: product, architecture, setup, deployment, and test documentation
-- `public`: static assets and Cloudflare Pages SPA routing fallback
+- `public`: static assets copied into the Vite production build
+- `wrangler.jsonc`: Cloudflare Workers Static Assets and SPA fallback configuration
 
 ## npm commands
 
@@ -26,7 +27,9 @@ npm run build      # Type checking plus production Vite build
 npm run db:validate # Static migration safety and completeness checks
 npm run deployment:validate # CI, Node 24, SPA fallback, and dist checks
 npm run security:scan-build # Scan dist for private credential patterns
+npm run worker:dry-run # Validate Worker packaging without deploying
 npm run preview    # Preview a completed production build
+npm run deploy     # Build and deploy the configured Cloudflare Worker
 ```
 
 ## Coding conventions
@@ -75,6 +78,7 @@ npm run typecheck
 npm run test
 npm run db:validate
 npm run build
+npm run worker:dry-run
 npm run deployment:validate
 npm run security:scan-build
 ```

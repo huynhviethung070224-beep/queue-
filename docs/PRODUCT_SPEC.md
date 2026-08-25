@@ -111,7 +111,7 @@ Skill does not improve priority. Recommendations prefer four players at the same
 ## Phase 6 acceptance criteria
 
 - GitHub Actions uses Node.js 24 and `npm ci`, then runs lint, type checking, tests, database validation, production build, deployment-artifact validation, and production-bundle credential scanning.
-- The repository pins Node.js 24, builds with `npm run build`, emits `dist`, and copies `public/_redirects` so direct SPA route refreshes resolve to `index.html` on Cloudflare Pages.
+- The repository pins Node.js 24, builds with `npm run build`, emits `dist`, and configures Cloudflare Workers Static Assets to serve `index.html` for unmatched SPA navigation routes.
 - Production and preview environment documentation allows only the public Supabase URL and browser publishable/anon key; database passwords, service-role keys, and admin credentials never enter Cloudflare or the frontend bundle.
 - Supabase production Site URL, exact production redirect URLs, narrowly scoped preview URL patterns, and optional custom-domain changes are documented as manual account steps.
 - Live test-project validation records only observed RLS, RPC, member/admin, Realtime, and concurrency results. Two-admin scenarios remain open when a second authorized admin is unavailable.

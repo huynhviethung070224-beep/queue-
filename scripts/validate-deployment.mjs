@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const packageJson = JSON.parse(readFileSync(resolve('package.json'), 'utf8'))
-const publicRedirects = readFileSync(resolve('public/_redirects'), 'utf8').trim()
+const workerConfig = JSON.parse(readFileSync(resolve('wrangler.jsonc'), 'utf8'))
 const ciWorkflow = readFileSync(resolve('.github/workflows/ci.yml'), 'utf8')
 
 assert.equal(
@@ -16,10 +16,16 @@ assert.equal(
   '24',
   '.nvmrc must select Node.js 24 for local and Cloudflare builds.',
 )
+assert.equal(workerConfig.name, 'queue', 'Wrangler must target the existing queue Worker.')
 assert.equal(
-  publicRedirects,
-  '/* /index.html 200',
-  'Cloudflare Pages needs the SPA fallback in public/_redirects.',
+  workerConfig.assets?.directory,
+  './dist',
+  'Wrangler must upload the Vite dist directory.',
+)
+assert.equal(
+  workerConfig.assets?.not_found_handling,
+  'single-page-application',
+  'Cloudflare Workers must serve index.html for unmatched SPA navigation routes.',
 )
 
 for (const command of [
@@ -29,6 +35,7 @@ for (const command of [
   'npm run test',
   'npm run db:validate',
   'npm run build',
+  'npm run worker:dry-run',
   'npm run deployment:validate',
   'npm run security:scan-build',
 ]) {
@@ -36,14 +43,13 @@ for (const command of [
 }
 assert.match(ciWorkflow, /node-version:\s*24/, 'CI must use Node.js 24.')
 
-for (const artifact of ['dist/index.html', 'dist/_redirects', 'dist/assets']) {
+for (const artifact of ['dist/index.html', 'dist/assets']) {
   assert.ok(existsSync(resolve(artifact)), `Missing production artifact: ${artifact}`)
 }
 
-assert.equal(
-  readFileSync(resolve('dist/_redirects'), 'utf8').trim(),
-  publicRedirects,
-  'Vite must copy the SPA fallback into dist unchanged.',
+assert.ok(
+  !existsSync(resolve('dist/_redirects')),
+  'Workers SPA routing must use wrangler.jsonc, not a Pages-style _redirects rewrite.',
 )
 
 const assetFiles = readdirSync(resolve('dist/assets'))
@@ -51,5 +57,5 @@ assert.ok(assetFiles.some((file) => file.endsWith('.js')), 'dist has no JavaScri
 assert.ok(assetFiles.some((file) => file.endsWith('.css')), 'dist has no CSS bundle.')
 
 console.log(
-  'Validated Node.js 24, CI commands, Cloudflare SPA fallback, and dist artifacts.',
+  'Validated Node.js 24, CI commands, Workers SPA routing, and dist artifacts.',
 )
