@@ -66,6 +66,8 @@ describe('Supabase admin service', () => {
     await service.removePlayer('session-new', 'p1')
     await service.updatePlayer('p1', 'Ian H.', 'intermediate')
     await service.setCourtEnabled(3, false)
+    await service.setMemberPaymentStatus('p1', true)
+    await service.setSessionMatchDuration('session-new', 600)
 
     expect(rpc).toHaveBeenCalledWith('create_club_session', {
       p_name: 'Monday Club Night',
@@ -83,6 +85,14 @@ describe('Supabase admin service', () => {
       p_player_id: 'p1',
       p_display_name: 'Ian H.',
       p_skill_level: 'intermediate',
+    })
+    expect(rpc).toHaveBeenCalledWith('set_member_payment_status', {
+      p_player_id: 'p1',
+      p_is_paid: true,
+    })
+    expect(rpc).toHaveBeenCalledWith('set_session_match_duration', {
+      p_session_id: 'session-new',
+      p_duration_seconds: 600,
     })
   })
 

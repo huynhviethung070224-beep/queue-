@@ -4,11 +4,12 @@ Phase 5 reviewed the repository's RLS, RPC, validation, race, and concurrency de
 
 ## Enforced security boundaries
 
-- All nine exposed application tables enable RLS, and `anon`/`authenticated` receive no direct table writes.
+- All ten application tables enable RLS, and `anon`/`authenticated` receive no direct table writes.
 - Client roles cannot select `admin_users`; admin membership is exposed only as the boolean `is_current_user_admin()` result.
 - Each admin state-change RPC calls `private.require_admin()`. Member join/leave calls require an authenticated identity and can affect only the current identity.
 - Every security-definer function uses an empty `search_path` and schema-qualified relations. Execute privileges are revoked and selectively granted to `authenticated`.
 - The browser's route guard and recommendation are advisory. RPC validation, row locks, constraints, and partial unique indexes are the authoritative boundary.
+- Payment status is isolated from member-visible reads and Realtime. Only admin-authorized RPCs list or mutate it, and the fairness module has no payment input.
 
 `npm run db:validate` statically guards these properties, including the required admin/member authorization calls, assignment locks, active queue/court/player unique indexes, and absence of client `admin_users` reads.
 
@@ -24,6 +25,8 @@ Phase 5 reviewed the repository's RLS, RPC, validation, race, and concurrency de
 | End multiple courts together | Each transaction locks its own match/court/player set and atomically updates four queue, session-player, and match-player rows | Both may commit; each group increments exactly once |
 | Remove while assigning | Both operations lock the active queue entry; assignment also rechecks that every selected entry is still waiting | One commits, the other fails its status/count validation |
 | Close while assigning | Both lock the open club-session row; close rejects active matches and assignment rechecks the session | Operations serialize without a partially closed assignment |
+| Change timer default while assigning | The duration-setting RPC locks the session; assignment also locks it, and the match insert trigger copies one committed value | New match gets either old or new duration atomically; existing matches never change |
+| Toggle payment while queue refetches | Admin RPC upserts one payment row; UI refetches authoritative directory state | Queue entry and fairness order remain unchanged |
 
 Assignments intentionally serialize on the one open-session row. That reduces theoretical throughput but is acceptable for fewer than 50 club users and makes conflicting three-court operations easier to reason about. PostgreSQL rolls back the entire RPC when any affected-row count or deferred four-player constraint fails, so no partial call/start/end state should commit.
 
@@ -56,3 +59,5 @@ On 2026-08-25, the linked disposable test project was checked without recording 
 The live join test exposed an ambiguous `ON CONFLICT (session_id, player_id)` reference inside `join_current_queue`. The append-only migration `20260825153000_fix_join_queue_conflict_target.sql` replaces it with `ON CONFLICT ON CONSTRAINT session_players_pkey`; the migration was applied and the member checks then passed.
 
 Only one authorized admin is available. Therefore this review does **not** claim that same-player assignment, same-court assignment, duplicate lifecycle transitions, or near-simultaneous multi-court completion passed with two authorized admin clients. Those scenarios remain a required manual gate before production use.
+
+Migration 7 and its feedback flows have passed local static/unit validation only. They have not been applied to or live-tested against the linked project in this working tree.

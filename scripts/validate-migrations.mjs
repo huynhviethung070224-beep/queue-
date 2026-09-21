@@ -31,6 +31,8 @@ const combinedSql = Object.values(migrations).join('\n')
 
 const requiredTables = [
   'players',
+  'member_payment_statuses',
+  'profile_link_requests',
   'player_identities',
   'admin_users',
   'club_sessions',
@@ -67,6 +69,9 @@ const requiredRpcFunctions = [
   'admin_remove_player',
   'admin_update_player',
   'set_court_enabled',
+  'set_member_payment_status',
+  'set_session_match_duration',
+  'admin_delete_member',
 ]
 
 for (const functionName of requiredRpcFunctions) {
@@ -120,21 +125,68 @@ const adminFunctions = [
   'admin_remove_player',
   'admin_update_player',
   'set_court_enabled',
+  'set_member_payment_status',
+  'set_session_match_duration',
+  'admin_delete_member',
 ]
 
 for (const functionName of adminFunctions) {
   assert.match(
     publicFunctionBlock(functionName),
-    /perform private\.require_admin\(\);/i,
+    /(?:perform private\.require_admin\(\);|[a-z_]+\s*=\s*private\.require_admin\(\);)/i,
     `${functionName} must recheck database admin membership.`,
   )
 }
 
-for (const functionName of ['join_current_queue', 'leave_current_queue']) {
+for (const functionName of [
+  'join_current_queue',
+  'leave_current_queue',
+  'search_member_profiles',
+]) {
   assert.match(
     publicFunctionBlock(functionName),
     /private\.require_authenticated\(\)/i,
     `${functionName} must require an authenticated caller.`,
+  )
+}
+
+assert.match(
+  combinedSql,
+  /create function public\.admin_delete_member\([\s\S]*?perform private\.require_admin\(\);/i,
+  'Member deletion must be an admin-authorized security-definer RPC.',
+)
+
+for (const functionName of ['search_member_profiles', 'list_members_for_admin']) {
+  assert.match(
+    combinedSql,
+    new RegExp(`grant execute on function public\\.${functionName}\\(`, 'i'),
+    `Authenticated execution grant missing for ${functionName}.`,
+  )
+}
+
+for (const functionName of [
+  'request_profile_link',
+  'get_my_profile_link_request',
+  'list_profile_link_requests',
+  'review_profile_link_request',
+]) {
+  assert.match(
+    combinedSql,
+    new RegExp(`grant execute on function public\\.${functionName}\\(`, 'i'),
+    `Authenticated execution grant missing for ${functionName}.`,
+  )
+}
+
+assert.match(
+  publicFunctionBlock('request_profile_link'),
+  /private\.require_authenticated\(\)/i,
+  'Profile-link requests must require an authenticated caller.',
+)
+for (const functionName of ['list_profile_link_requests', 'review_profile_link_request']) {
+  assert.match(
+    publicFunctionBlock(functionName),
+    /(?:perform private\.require_admin\(\);|[a-z_]+\s*=\s*private\.require_admin\(\);)/i,
+    `${functionName} must recheck database admin membership.`,
   )
 }
 
@@ -163,6 +215,32 @@ assert.doesNotMatch(
   combinedSql,
   /grant select on table public\.admin_users to (?:anon|authenticated)/i,
   'Client roles must not receive direct admin membership reads.',
+)
+
+assert.match(
+  combinedSql,
+  /create trigger matches_copy_session_duration[\s\S]*?before insert on public\.matches/i,
+  'Each new match must copy the session duration exactly once at insert time.',
+)
+assert.match(
+  combinedSql,
+  /default_match_duration_seconds integer not null default 420/i,
+  'New sessions must default to a seven-minute match duration.',
+)
+assert.match(
+  publicFunctionBlock('set_member_payment_status'),
+  /perform private\.require_admin\(\);/i,
+  'Only an authorized admin may change payment status.',
+)
+assert.match(
+  combinedSql,
+  /create table public\.member_payment_statuses\s*\([\s\S]*?player_id uuid primary key references public\.players/i,
+  'Payment status must persist by stable player ID rather than by club session.',
+)
+assert.doesNotMatch(
+  publicFunctionBlock('search_member_profiles'),
+  /\b(?:insert|update|delete)\b/i,
+  'Profile search must remain discovery-only and must never link or mutate identities.',
 )
 
 assert.match(
@@ -224,8 +302,8 @@ for (const tableName of realtimeTables) {
 
 assert.doesNotMatch(
   realtimeMigration,
-  /'player_identities'|'admin_users'/i,
-  'Sensitive identity and admin tables must not be published to Realtime.',
+  /'player_identities'|'admin_users'|'member_payment_statuses'/i,
+  'Sensitive identity, admin, and payment tables must not be published to Realtime.',
 )
 
 assert.match(

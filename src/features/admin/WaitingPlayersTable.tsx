@@ -1,14 +1,14 @@
 import { Pencil, Trash2 } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/ui/StatusBadge'
-import type { QueuePlayer } from '../../types/domain'
+import type { AdminQueuePlayer } from '../../types/domain'
 
 interface WaitingPlayersTableProps {
-  players: QueuePlayer[]
+  players: AdminQueuePlayer[]
   selectedIds: Set<string>
   onToggle: (playerId: string) => void
-  onEdit: (player: QueuePlayer) => void
-  onRemove: (player: QueuePlayer) => void
+  onEdit: (player: AdminQueuePlayer) => void
+  onRemove: (player: AdminQueuePlayer) => void
   disabled?: boolean
 }
 
@@ -71,6 +71,11 @@ export function WaitingPlayersTable({
                   <td className="px-4 py-4 font-semibold text-slate-900">
                     <span className="mr-2 text-xs text-slate-400">#{index + 1}</span>
                     {player.displayName}
+                    {!player.isPaid && (
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-1 text-xs font-bold text-amber-900">
+                        Unpaid
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-4"><StatusBadge kind="skill" value={player.skillLevel} /></td>
                   <td className="px-4 py-4 text-slate-600">{player.waitMinutes} min</td>
@@ -111,6 +116,11 @@ export function WaitingPlayersTable({
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-slate-900">#{index + 1} {player.displayName}</span>
                     <StatusBadge kind="skill" value={player.skillLevel} />
+                    {!player.isPaid && (
+                      <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-bold text-amber-900">
+                        Unpaid
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
                     Waiting {player.waitMinutes} min · {player.gamesPlayed} games

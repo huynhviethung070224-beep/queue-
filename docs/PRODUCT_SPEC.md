@@ -12,7 +12,7 @@ The configured club name is **Drexel Badminton Club**. Both names can be changed
 
 A member receives an anonymous Supabase Auth session rather than creating a visible account. They enter a display name and one of three skill levels: beginner, intermediate, or advanced.
 
-Members can join the current open session, see their queue position and wait time, see games played, view the live queue and courts, leave while waiting, and recover their identity after refresh. Called and playing states must be prominent. Network interruption and reconnect states must be understandable.
+Members can join the current open session, see their queue position and wait time, see games played, view the live queue and courts, leave while waiting, and recover their stable profile after refresh or a later session in the same browser origin. Before creating a profile, they can search old display names and see minimal skill/last-joined disambiguation. If they recognize an old profile, they can submit an ownership request; an administrator must verify the person and explicitly approve or reject the request before any identity is linked. After approval, the member browser shows a clear verification banner and an explicit **Join live queue** action. Selecting a name never attaches an existing profile automatically. Called and playing states must be prominent. Network interruption and reconnect states must be understandable.
 
 Members cannot edit other players, change game counts, control courts or matches, or grant themselves admin access.
 
@@ -20,7 +20,7 @@ Members cannot edit other players, change game counts, control courts or matches
 
 Admins use Supabase email/password authentication. An Auth UUID must also exist in `admin_users` before any admin operation succeeds.
 
-Admins manage sessions, courts, recommended/manual groups of four, the called/playing/completed lifecycle, auto-requeue, no-shows, duplicate entries, and player corrections. Destructive actions require confirmation.
+Admins manage sessions, courts, recommended/manual groups of four, the called/playing/completed lifecycle, auto-requeue, no-shows, duplicate entries, and player corrections. They can search a persistent private member directory and toggle Paid/Unpaid status; new profiles default to Unpaid. Payment never changes queue eligibility, fairness, or recommendations. Destructive actions require confirmation.
 
 ## Club session rules
 
@@ -31,12 +31,14 @@ Admins manage sessions, courts, recommended/manual groups of four, the called/pl
 
 ## Court and match rules
 
-- Courts are fixed as Court 1, Court 2, and Court 3.
+- Courts are fixed as Court 1, Court 2, and Court 3. UI guidance labels are `Court 1 · Advanced`, `Court 2 · Beginner`, and `Court 3 · Intermediate`; they do not restrict assignments or alter recommendations.
 - A court is disabled, available, called, or playing.
 - Only one called or playing match may occupy a court.
 - A match contains exactly four distinct players.
 - Called players can be returned to their original queue positions if the call is cancelled.
-- Playing matches show elapsed time and do not end automatically.
+- Each match stores its own duration and shows an independent countdown. The session default is seven minutes and applies only when a new match is called.
+- Reaching zero shows `Time’s up`; it never ends a match, changes game counts, or requeues players. The admin still ends the match explicitly.
+- Changing the session default never changes or resets an already-called or playing match.
 - Ending a match updates game counts and rest time, then optionally requeues players.
 
 ## Fairness and recommendation
@@ -79,7 +81,7 @@ Skill does not improve priority. Recommendations prefer four players at the same
 - The member route restores a persisted Supabase session or creates an anonymous one.
 - Current open session, personal queue state, fairness-ordered waiting list, active matches, and all three courts load from Supabase.
 - Join and leave actions call the approved atomic RPC functions and block duplicate UI submissions while pending.
-- Called and playing members retain prominent court/status information, and playing courts show a live elapsed timer without auto-ending.
+- Called and playing members retain prominent court/status information, and playing courts show a live countdown without auto-ending.
 - A single owned Realtime channel observes only member-visible live tables, applies active-session filters where supported, and is removed during cleanup.
 - Realtime events, successful subscription, and browser reconnect trigger authoritative refetches rather than client-side database-event merging.
 - Loading, no-open-session, unconfigured, offline, reconnecting, live-channel-error, RPC-error, and first-load server-error states are understandable.
@@ -116,3 +118,13 @@ Skill does not improve priority. Recommendations prefer four players at the same
 - Supabase production Site URL, exact production redirect URLs, narrowly scoped preview URL patterns, and optional custom-domain changes are documented as manual account steps.
 - Live test-project validation records only observed RLS, RPC, member/admin, Realtime, and concurrency results. Two-admin scenarios remain open when a second authorized admin is unavailable.
 - The complete local verification suite passes before a separately authorized commit, push, or deployment.
+
+## Approved feedback 2–5 acceptance criteria
+
+- A same-origin browser Auth identity restores one stable member profile across club sessions; duplicate display names are never merged automatically.
+- Existing-name search returns minimal suggestions but cannot claim/link a profile. Cross-device linking remains pending an approved verification design.
+- Payment status is stored separately from public club state, defaults to Unpaid, is readable/changeable only through admin-authorized paths, persists across sessions, and has no fairness input.
+- The admin sees an Unpaid badge and one notice for a newly observed unpaid join without repeated alerts on ordinary Realtime refetches.
+- New matches copy a persisted session duration default; each court derives its countdown from database timestamps with no per-second database writes and no automatic end transition.
+- Court skill labels are display guidance only and never become a database restriction or recommendation weight.
+- The repository prepares Worker name `badminton`; changing the account subdomain to `drexel-queue`, preserving the old origin, updating Supabase Auth URLs, and deploying remain manual production steps.

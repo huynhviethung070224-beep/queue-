@@ -20,17 +20,41 @@ export type MemberConnectionStatus =
 
 export interface MemberSnapshot {
   session: ClubSession | null
+  profile: MemberProfile | null
   member: QueuePlayer | null
   queuePosition: number | null
   queue: QueuePlayer[]
   courts: Court[]
+  profileLinkRequest: ProfileLinkRequest | null
+}
+
+export interface MemberProfile {
+  id: string
+  displayName: string
+  skillLevel: SkillLevel
+}
+
+export interface MemberProfileSuggestion extends MemberProfile {
+  lastJoinedAt: string | null
+}
+
+export interface ProfileLinkRequest {
+  id: string
+  targetPlayerId: string
+  status: 'pending' | 'approved' | 'rejected'
+  createdAt: string
+  reviewedAt: string | null
 }
 
 export interface MemberService {
   ensureAuthenticated: () => Promise<string>
+  resetIdentity?: () => Promise<void>
   loadSnapshot: (userId: string) => Promise<MemberSnapshot>
   joinQueue: (displayName: string, skillLevel: SkillLevel) => Promise<void>
   leaveQueue: () => Promise<void>
+  searchProfiles: (query: string) => Promise<MemberProfileSuggestion[]>
+  requestProfileLink: (playerId: string) => Promise<void>
+  getProfileLinkRequest: () => Promise<ProfileLinkRequest | null>
   subscribe: (
     sessionId: string | null,
     onChange: () => void,
@@ -85,6 +109,8 @@ function buildSnapshot(
   matchRows: MatchRow[],
   matchPlayerRows: MatchPlayerRow[],
   ownPlayerId: string | null,
+  profile: MemberProfile | null,
+  profileLinkRequest: ProfileLinkRequest | null,
 ): MemberSnapshot {
   const players = new Map(playerRows.map((player) => [player.id, player]))
   const sessionPlayers = new Map(
@@ -164,6 +190,9 @@ function buildSnapshot(
         name: court.name,
         status: court.status,
         ...(match?.started_at ? { matchStartedAt: match.started_at } : {}),
+        ...(match?.duration_seconds
+          ? { matchDurationSeconds: match.duration_seconds }
+          : {}),
         ...(playerNames?.length ? { playerNames } : {}),
       }
     })
@@ -177,10 +206,12 @@ function buildSnapshot(
       openedAt: sessionRow.opened_at ?? sessionRow.created_at,
       autoRequeue: sessionRow.auto_requeue,
     },
+    profile,
     member,
     queuePosition: queuePosition && queuePosition > 0 ? queuePosition : null,
     queue,
     courts,
+    profileLinkRequest,
   }
 }
 
@@ -199,8 +230,13 @@ export function createSupabaseMemberService(
       return signInData.user.id
     },
 
+    async resetIdentity() {
+      const { error } = await client.auth.signOut()
+      throwIfError(error)
+    },
+
     async loadSnapshot(userId) {
-      const [sessionResult, courtsResult, identityResult] = await Promise.all([
+      const [sessionResult, courtsResult, identityResult, linkRequestResult] = await Promise.all([
         client
           .from('club_sessions')
           .select('*')
@@ -214,17 +250,45 @@ export function createSupabaseMemberService(
           .select('player_id')
           .eq('auth_user_id', userId)
           .maybeSingle(),
+        client.rpc('get_my_profile_link_request'),
       ])
 
       throwIfError(sessionResult.error)
       throwIfError(courtsResult.error)
       throwIfError(identityResult.error)
+      throwIfError(linkRequestResult.error)
 
       const session = sessionResult.data
       const courts = courtsResult.data ?? []
+      const ownPlayerId = identityResult.data?.player_id ?? null
+      const latestRequest = linkRequestResult.data?.[0]
+        ? {
+            id: linkRequestResult.data[0].id,
+            targetPlayerId: linkRequestResult.data[0].target_player_id,
+            status: linkRequestResult.data[0].status as ProfileLinkRequest['status'],
+            createdAt: linkRequestResult.data[0].created_at,
+            reviewedAt: linkRequestResult.data[0].reviewed_at,
+          }
+        : null
+      const profileResult = ownPlayerId
+        ? await client
+            .from('players')
+            .select('*')
+            .eq('id', ownPlayerId)
+            .maybeSingle()
+        : { data: null, error: null }
+      throwIfError(profileResult.error)
+      const profile = profileResult.data
+        ? {
+            id: profileResult.data.id,
+            displayName: profileResult.data.display_name,
+            skillLevel: profileResult.data.skill_level,
+          }
+        : null
       if (!session) {
         return {
           session: null,
+          profile,
           member: null,
           queuePosition: null,
           queue: [],
@@ -236,6 +300,7 @@ export function createSupabaseMemberService(
                 : null
             })
             .filter((court) => court !== null),
+          profileLinkRequest: latestRequest,
         }
       }
 
@@ -272,7 +337,9 @@ export function createSupabaseMemberService(
         queue.data ?? [],
         matches.data ?? [],
         matchPlayers.data ?? [],
-        identityResult.data?.player_id ?? null,
+        ownPlayerId,
+        profile,
+        latestRequest,
       )
     },
 
@@ -287,6 +354,41 @@ export function createSupabaseMemberService(
     async leaveQueue() {
       const { error } = await client.rpc('leave_current_queue')
       throwIfError(error)
+    },
+
+    async searchProfiles(query) {
+      const { data, error } = await client.rpc('search_member_profiles', {
+        p_query: query.trim(),
+      })
+      throwIfError(error)
+      return (data ?? []).map((profile) => ({
+        id: profile.player_id,
+        displayName: profile.display_name,
+        skillLevel: profile.skill_level,
+        lastJoinedAt: profile.last_joined_at,
+      }))
+    },
+
+    async requestProfileLink(playerId) {
+      const { error } = await client.rpc('request_profile_link', {
+        p_player_id: playerId,
+      })
+      throwIfError(error)
+    },
+
+    async getProfileLinkRequest() {
+      const { data, error } = await client.rpc('get_my_profile_link_request')
+      throwIfError(error)
+      const request = data?.[0]
+      return request
+        ? {
+            id: request.id,
+            targetPlayerId: request.target_player_id,
+            status: request.status as ProfileLinkRequest['status'],
+            createdAt: request.created_at,
+            reviewedAt: request.reviewed_at,
+          }
+        : null
     },
 
     subscribe(sessionId, onChange, onStatus) {

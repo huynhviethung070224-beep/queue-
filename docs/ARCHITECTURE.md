@@ -16,7 +16,7 @@ React + React Router
          └── atomic match transitions
 ```
 
-## Current Phase 6 architecture
+## Current architecture
 
 - Route composition lives in `src/App.tsx`.
 - Shared header/footer layout lives in `src/components/layout`.
@@ -32,6 +32,8 @@ React + React Router
 - `src/features/auth/AdminAuthContext.tsx` restores the admin session, follows Auth events, and exposes protected-route state without treating client state as authorization.
 - `src/features/admin/useAdminDashboard.ts` owns authoritative admin snapshots, reconnect refreshes, feedback, and a synchronous duplicate-action guard.
 - `src/features/queue/fairness.ts` is the single pure, deterministic source for priority sorting, one-court recommendation, and non-overlapping multi-court recommendations.
+- `member_payment_statuses` is isolated from public live state. Admin-only RPCs provide the persistent directory and payment toggle; neither payment nor court labels enter `fairness.ts`.
+- Each match copies `club_sessions.default_match_duration_seconds` at insert time. Member/admin timers derive remaining time locally from `matches.started_at` and `matches.duration_seconds`; no interval writes to PostgreSQL.
 - Admin routes are lazy-loaded so the member entry bundle does not pay for protected dashboard code before navigation.
 - Timestamped SQL migrations live in `supabase/migrations` and must remain append-only after use.
 - `.github/workflows/ci.yml` reproduces the locked Node.js 24 verification sequence without requiring Supabase credentials.
@@ -49,6 +51,7 @@ The recommendation search prefers a four-player same-level combination. Its fall
 ## Database model
 
 - `players`: club-visible display name and skill level
+- `member_payment_statuses`: private persistent Paid/Unpaid status, defaulting to Unpaid
 - `player_identities`: private mapping from Supabase Auth user to player
 - `club_sessions`: session status and settings
 - `session_players`: per-session games and last-match end time
@@ -58,7 +61,7 @@ The recommendation search prefers a four-player same-level combination. Its fall
 - `match_players`: four player/queue-entry links per match
 - `admin_users`: authorized Auth UUIDs
 
-`player_identities` is separate so Realtime consumers can receive player display data without receiving other members' Auth UUIDs.
+`player_identities` is separate so Realtime consumers can receive player display data without receiving other members' Auth UUIDs. It restores the same profile only when Supabase restores the same browser-origin Auth identity. Existing-profile search exposes only stable player ID, display name, skill, and last joined time; it never changes `player_identities`.
 
 Shared readable tables do not store member or admin Auth UUIDs. `player_identities` is readable only by its owner, while `admin_users` has no client table-read grant. The frontend will check admin status through `is_current_user_admin()`.
 
@@ -74,7 +77,7 @@ Shared readable tables do not store member or admin Auth UUIDs. `player_identiti
 
 ## Security model
 
-- All nine exposed application tables have RLS enabled.
+- All ten application tables have RLS enabled.
 - `anon` and `authenticated` receive no direct table-write grants.
 - Signed-in anonymous members use Supabase's `authenticated` PostgreSQL role, just like permanent users.
 - Shared club tables expose sanitized state for the open session; admins can also read history, while a member retains access to their own identity/history rows.
@@ -82,6 +85,7 @@ Shared readable tables do not store member or admin Auth UUIDs. `player_identiti
 - Admin membership is checked from `admin_users` inside private security-definer helpers.
 - Every callable state-change function validates authentication, validates input, uses an empty `search_path`, and schema-qualifies application relations.
 - Function execution is revoked by default and re-granted only to `authenticated` for the documented RPC surface.
+- `member_payment_statuses` has no public/member policy and is not in the Realtime publication. Its read and mutation RPCs require database admin membership.
 
 ## State-change RPC surface
 
@@ -89,6 +93,7 @@ Member operations:
 
 - `join_current_queue`
 - `leave_current_queue`
+- `search_member_profiles` (read-only discovery; never links identity)
 
 Admin operations:
 
@@ -97,6 +102,9 @@ Admin operations:
 - `start_called_match`, `cancel_called_match`, `end_playing_match`
 - `admin_remove_player`, `admin_update_player`
 - `set_court_enabled`
+- `set_member_payment_status`, `set_session_match_duration`
+
+Admin read-only directory access uses `list_members_for_admin`.
 
 Assignments and match transitions lock the session, court, match, queue, and player rows needed by that transition. The four queue entries are changed as one transaction. A cancelled call restores `waiting` without changing `queued_at`; ending a match updates all four game counts and optionally inserts four new waiting entries at the same end timestamp.
 
@@ -114,6 +122,12 @@ Assignments and match transitions lock the session, court, match, queue, and pla
 The member service owns one channel. It listens to club sessions, courts, visible player records, and session-filtered queue/session-player/match records. Database events invalidate the local snapshot; they are not merged into it. The hook refetches authoritative state after events, the initial subscription, and browser reconnect, and removes the channel on cleanup. Authentication identities and admin records are not publication or subscription targets.
 
 The admin service uses the same invalidation/refetch rule with its own single active-session channel. Auth events use a separate Supabase Auth subscription. Both subscriptions have one owner and explicit cleanup; neither subscribes to `admin_users` or `player_identities`.
+
+Payment rows are intentionally excluded from Realtime to avoid publishing private membership state. A joining player already emits a visible `players`/queue invalidation, and an admin payment mutation explicitly refetches after success.
+
+## Cross-device profile-link decision
+
+Cross-device or renamed-origin linking is intentionally not implemented. Name selection is not identity proof. The minimum future design should let an authorized admin generate a short-lived, single-use random claim code for one player, store only a hash and expiry, and consume it atomically from the member's newly authenticated identity. It must reject already-linked profiles and audit issuer/consumption. This design requires separate approval, migration, RPC security review, rate limiting, and tests before code is added.
 
 ## Admin authentication and actions
 

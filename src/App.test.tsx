@@ -26,9 +26,11 @@ function snapshot(member: QueuePlayer | null = null): MemberSnapshot {
       openedAt: new Date().toISOString(),
       autoRequeue: true,
     },
+    profile: null,
     member,
     queuePosition: member ? 1 : null,
     queue: member ? [member] : [],
+    profileLinkRequest: null,
     courts: [
       { number: 1, name: 'Court 1', status: 'available' },
       { number: 2, name: 'Court 2', status: 'available' },
@@ -51,6 +53,9 @@ function createMemberService() {
     leaveQueue: vi.fn(async () => {
       currentMember = null
     }),
+    searchProfiles: vi.fn(async () => []),
+    requestProfileLink: vi.fn(async () => undefined),
+    getProfileLinkRequest: vi.fn(async () => null),
     subscribe: vi.fn((_sessionId, onChange, onStatus) => {
       changeListener = onChange
       onStatus('connected')
@@ -70,14 +75,17 @@ function adminSnapshot(): AdminSnapshot {
       autoRequeue: true,
       createdAt: '2026-08-24T22:00:00.000Z',
       openedAt: '2026-08-24T22:00:00.000Z',
+      defaultMatchDurationSeconds: 420,
     },
     draftSessions: [],
     waitingPlayers: [
-      waitingPlayer,
-      { ...waitingPlayer, id: 'player-2', displayName: 'Alex K.' },
-      { ...waitingPlayer, id: 'player-3', displayName: 'Priya S.' },
-      { ...waitingPlayer, id: 'player-4', displayName: 'Jordan L.' },
+      { ...waitingPlayer, isPaid: false },
+      { ...waitingPlayer, id: 'player-2', displayName: 'Alex K.', isPaid: true },
+      { ...waitingPlayer, id: 'player-3', displayName: 'Priya S.', isPaid: true },
+      { ...waitingPlayer, id: 'player-4', displayName: 'Jordan L.', isPaid: true },
     ],
+    members: [],
+    profileLinkRequests: [],
     courts: [
       { number: 1, name: 'Court 1', status: 'available' },
       { number: 2, name: 'Court 2', status: 'available' },
@@ -89,6 +97,7 @@ function adminSnapshot(): AdminSnapshot {
 function createAdminService(initialStatus: 'signedOut' | 'authorized' | 'unauthorized' = 'signedOut') {
   let authStatus = initialStatus
   let authListener: (() => void) | null = null
+  let realtimeListener: (() => void) | null = null
   const authCleanup = vi.fn()
   const realtimeCleanup = vi.fn()
   const service: AdminService = {
@@ -122,12 +131,23 @@ function createAdminService(initialStatus: 'signedOut' | 'authorized' | 'unautho
     removePlayer: vi.fn(async () => undefined),
     updatePlayer: vi.fn(async () => undefined),
     setCourtEnabled: vi.fn(async () => undefined),
-    subscribe: vi.fn((_sessionId, _onChange, onStatus) => {
+    setMemberPaymentStatus: vi.fn(async () => undefined),
+    setSessionMatchDuration: vi.fn(async () => undefined),
+    reviewProfileLinkRequest: vi.fn(async () => undefined),
+    deleteMember: vi.fn(async () => undefined),
+    setMemberArchived: vi.fn(async () => undefined),
+    subscribe: vi.fn((_sessionId, onChange, onStatus) => {
+      realtimeListener = onChange
       onStatus('connected')
       return realtimeCleanup
     }),
   }
-  return { service, authCleanup, realtimeCleanup }
+  return {
+    service,
+    authCleanup,
+    realtimeCleanup,
+    emitRealtime: () => realtimeListener?.(),
+  }
 }
 
 function renderRoute(
@@ -170,6 +190,7 @@ describe('application routes and major states', () => {
     const view = renderRoute('/', service)
 
     await screen.findByRole('heading', { name: 'Monday Club Night' })
+    await waitFor(() => expect(service.subscribe).toHaveBeenCalledOnce())
     expect(service.loadSnapshot).toHaveBeenCalledOnce()
 
     act(() => emitChange())
@@ -272,6 +293,20 @@ describe('application routes and major states', () => {
     expect(service.assignPlayers).toHaveBeenCalledOnce()
   })
 
+  it('announces an unpaid join once without repeating after refetch', async () => {
+    const user = userEvent.setup()
+    const { service, emitRealtime } = createAdminService('authorized')
+    renderRoute('/admin', undefined, service)
+
+    expect(await screen.findByText(/Ian H\. joined with Unpaid status/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByText(/Ian H\. joined with Unpaid status/)).not.toBeInTheDocument()
+
+    act(() => emitRealtime())
+    await waitFor(() => expect(service.loadSnapshot).toHaveBeenCalledTimes(2))
+    expect(screen.queryByText(/Ian H\. joined with Unpaid status/)).not.toBeInTheDocument()
+  })
+
   it('blocks duplicate assignment submissions while the first RPC is pending', async () => {
     const user = userEvent.setup()
     const { service } = createAdminService('authorized')
@@ -293,7 +328,9 @@ describe('application routes and major states', () => {
     expect(callButton).toBeDisabled()
 
     act(() => finishAssignment?.('match-new'))
-    expect(await screen.findByText('Four players were called to Court 1.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Four players were called to Court 1 · Advanced.'),
+    ).toBeInTheDocument()
     expect(service.assignPlayers).toHaveBeenCalledOnce()
   })
 

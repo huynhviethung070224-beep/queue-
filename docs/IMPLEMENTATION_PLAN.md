@@ -87,3 +87,49 @@ The Phase 2 owner-activation step was later completed against the linked test pr
 - [x] Run final checks and report remaining manual steps.
 - [x] Do not deploy, create a custom domain, commit, or push without explicit authorization and account access.
 - [x] Receive separate explicit authorization for commit, push, and deployment.
+- [x] Apply migration 7 to the linked Supabase project and confirm all seven migration versions align.
+- [x] Rename the Cloudflare account subdomain to `drexel-queue` and deploy the `badminton` Worker.
+- [x] Verify direct route refresh, anonymous member Auth, member RLS/RPC denial, mobile layout, and Realtime reconnect on the final origin.
+- [ ] Verify the credentialed admin dashboard and feedback controls with the owner's admin password.
+- [ ] Review Cloudflare Git-build variables and Supabase Auth Site URL/Redirect URLs in their dashboards.
+
+## Approved feedback 2–5 — implementation and deployment
+
+- [x] Preserve stable same-browser member profiles across sessions and prefill restored profile data.
+- [x] Add minimal old-profile name search/disambiguation without permitting name-only identity claims or merges.
+- [x] Document the required secure one-time confirmation design before any cross-device profile linking.
+- [x] Add an admin-only persistent member directory and Paid/Unpaid status with new-member default Unpaid.
+- [x] Show Unpaid badges and a one-time admin join notice without changing join eligibility or fairness.
+- [x] Add a persisted seven-minute session default copied independently into each new match.
+- [x] Show independent member/admin countdowns, `Time's up`, and retain explicit admin End behavior.
+- [x] Add Court 1 Advanced, Court 2 Beginner, and Court 3 Intermediate guidance labels without restrictions.
+- [x] Configure repository Worker name `badminton` and complete the `drexel-queue` account-subdomain transition.
+- [x] Add automated coverage and update repository validators/documentation.
+- [x] Apply migration 7 to the linked Supabase project.
+- [x] Verify member loading/search, payment RLS denial, court labels, direct routes, responsive layout, and Realtime reconnect on the final Worker origin.
+- [ ] Verify credentialed admin payment/timer flows and remaining lifecycle scenarios manually.
+- [x] Rename the account subdomain, create/deploy the `badminton` Worker, and verify the final origin.
+- [ ] Commit and push the current feedback 2–5 worktree (not authorized by the deployment-only follow-up request).
+
+## Ownership verification follow-up
+
+- [x] Add a pending profile-link request table with RLS and append-only migration.
+- [x] Add member request and admin approve/reject RPCs with database authorization and row locking.
+- [x] Add member request UI and admin ownership-request review UI.
+- [ ] Test a real approved and rejected request with the owner's admin account.
+- [x] Apply migration 8 and deploy the updated Worker after all automated checks passed.
+
+## Admin member cleanup follow-up
+
+- [x] Add an admin-only delete-member RPC with active-state and match-history safety guards.
+- [x] Add a confirmation-gated Delete member action to the admin directory.
+- [x] Apply migration 9 and deploy the updated Worker after all automated checks passed.
+- [ ] Manually verify deleting a disposable duplicate profile with the owner's admin account.
+
+## Archived member follow-up
+
+- [x] Add persistent `is_archived` state while preserving match history.
+- [x] Add admin Archive/Restore controls with confirmation and database authorization.
+- [x] Prevent archived profiles from appearing in member search or joining new sessions.
+- [x] Apply migrations 10–11 and deploy the updated Worker.
+- [ ] Manually archive and restore a disposable member with the owner's admin account.

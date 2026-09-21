@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { getCourtDisplayName } from '../../config/app'
 import type { SkillLevel } from '../../types/domain'
 import type {
   AdminConnectionStatus,
@@ -16,10 +17,12 @@ export function useAdminDashboard(service: AdminService | null, enabled: boolean
   const [pendingAction, setPendingAction] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState('Loading authoritative club state…')
+  const [unpaidNotice, setUnpaidNotice] = useState<string | null>(null)
   const [connection, setConnection] =
     useState<AdminConnectionStatus>('reconnecting')
   const [now, setNow] = useState(0)
   const pendingRef = useRef<string | null>(null)
+  const seenUnpaidSessionPlayers = useRef(new Set<string>())
 
   function requireService() {
     if (!service) throw new Error('Supabase admin service is not configured.')
@@ -32,6 +35,23 @@ export function useAdminDashboard(service: AdminService | null, enabled: boolean
       if (showLoading) setLoading(true)
       try {
         const nextSnapshot = await service.loadSnapshot()
+        const sessionId = nextSnapshot.activeSession?.id
+        const newUnpaidPlayers = nextSnapshot.waitingPlayers.filter(
+          (player) =>
+            !player.isPaid &&
+            Boolean(sessionId) &&
+            !seenUnpaidSessionPlayers.current.has(`${sessionId}:${player.id}`),
+        )
+        for (const player of nextSnapshot.waitingPlayers) {
+          if (!player.isPaid && sessionId) {
+            seenUnpaidSessionPlayers.current.add(`${sessionId}:${player.id}`)
+          }
+        }
+        if (newUnpaidPlayers.length > 0) {
+          setUnpaidNotice(
+            `${newUnpaidPlayers.map((player) => player.displayName).join(', ')} joined with Unpaid status. Queue priority is unchanged.`,
+          )
+        }
         setSnapshot(nextSnapshot)
         setError(null)
         if (navigator.onLine) setConnection('connected')
@@ -129,6 +149,8 @@ export function useAdminDashboard(service: AdminService | null, enabled: boolean
     pendingAction,
     error,
     notice,
+    unpaidNotice,
+    dismissUnpaidNotice: () => setUnpaidNotice(null),
     connection,
     retry: () => loadSnapshot(true),
     createSession: (name: string, autoRequeue: boolean) =>
@@ -149,11 +171,11 @@ export function useAdminDashboard(service: AdminService | null, enabled: boolean
         () => requireService().closeSession(sessionId),
         'The club session is closed.',
       ),
-    assignPlayers: (courtNumber: number, playerIds: string[]) =>
+    assignPlayers: (courtNumber: 1 | 2 | 3, playerIds: string[]) =>
       runAction(
         'assign-players',
         () => requireService().assignPlayers(courtNumber, playerIds),
-        `Four players were called to Court ${courtNumber}.`,
+        `Four players were called to ${getCourtDisplayName(courtNumber)}.`,
       ),
     startMatch: (matchId: string, courtName: string) =>
       runAction(
@@ -189,11 +211,45 @@ export function useAdminDashboard(service: AdminService | null, enabled: boolean
         () => requireService().updatePlayer(playerId, displayName, skillLevel),
         `${displayName} was updated.`,
       ),
-    setCourtEnabled: (courtNumber: number, enabledCourt: boolean) =>
+    setCourtEnabled: (courtNumber: 1 | 2 | 3, enabledCourt: boolean) =>
       runAction(
         `court-${courtNumber}`,
         () => requireService().setCourtEnabled(courtNumber, enabledCourt),
-        `Court ${courtNumber} is now ${enabledCourt ? 'available' : 'disabled'}.`,
+        `${getCourtDisplayName(courtNumber)} is now ${enabledCourt ? 'available' : 'disabled'}.`,
+      ),
+    setMemberPaymentStatus: (
+      playerId: string,
+      displayName: string,
+      isPaid: boolean,
+    ) =>
+      runAction(
+        `payment-${playerId}`,
+        () => requireService().setMemberPaymentStatus(playerId, isPaid),
+        `${displayName} is now marked ${isPaid ? 'Paid' : 'Unpaid'}.`,
+      ),
+    setSessionMatchDuration: (sessionId: string, durationSeconds: number) =>
+      runAction(
+        'match-duration',
+        () => requireService().setSessionMatchDuration(sessionId, durationSeconds),
+        `New matches will use ${Math.round(durationSeconds / 60)} minutes. Running matches were not changed.`,
+      ),
+    reviewProfileLinkRequest: (requestId: string, approve: boolean, displayName: string) =>
+      runAction(
+        `profile-link-${requestId}`,
+        () => requireService().reviewProfileLinkRequest(requestId, approve),
+        `${displayName} ownership request ${approve ? 'approved' : 'rejected'}.`,
+      ),
+    deleteMember: (playerId: string, displayName: string) =>
+      runAction(
+        `delete-member-${playerId}`,
+        () => requireService().deleteMember(playerId),
+        `${displayName} was deleted.`,
+      ),
+    setMemberArchived: (playerId: string, displayName: string, archived: boolean) =>
+      runAction(
+        `archive-member-${playerId}`,
+        () => requireService().setMemberArchived(playerId, archived),
+        `${displayName} was ${archived ? 'archived' : 'restored'}.`,
       ),
   }
 }

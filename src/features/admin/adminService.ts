@@ -1,7 +1,11 @@
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseAdminClient } from '../../lib/supabase'
 import type { Database, Tables } from '../../types/database'
-import type { Court, QueuePlayer, SkillLevel } from '../../types/domain'
+import type {
+  AdminQueuePlayer,
+  Court,
+  SkillLevel,
+} from '../../types/domain'
 import { compareFairnessPriority } from '../queue/fairness'
 
 type ClubSessionRow = Tables<'club_sessions'>
@@ -30,17 +34,38 @@ export interface AdminSession {
   autoRequeue: boolean
   createdAt: string
   openedAt: string | null
+  defaultMatchDurationSeconds: number
 }
 
 export interface AdminCourt extends Court {
   activeMatchId?: string
 }
 
+export interface AdminMember {
+  id: string
+  displayName: string
+  skillLevel: SkillLevel
+  isPaid: boolean
+  isArchived: boolean
+  createdAt: string
+  lastJoinedAt: string | null
+}
+
+export interface ProfileLinkRequest {
+  id: string
+  targetPlayerId: string
+  targetDisplayName: string
+  targetSkillLevel: SkillLevel
+  createdAt: string
+}
+
 export interface AdminSnapshot {
   activeSession: AdminSession | null
   draftSessions: AdminSession[]
-  waitingPlayers: QueuePlayer[]
+  waitingPlayers: AdminQueuePlayer[]
   courts: AdminCourt[]
+  members: AdminMember[]
+  profileLinkRequests: ProfileLinkRequest[]
 }
 
 export interface AdminService {
@@ -52,7 +77,7 @@ export interface AdminService {
   createSession: (name: string, autoRequeue: boolean) => Promise<string>
   openSession: (sessionId: string) => Promise<void>
   closeSession: (sessionId: string) => Promise<void>
-  assignPlayers: (courtNumber: number, playerIds: string[]) => Promise<string>
+  assignPlayers: (courtNumber: 1 | 2 | 3, playerIds: string[]) => Promise<string>
   startMatch: (matchId: string) => Promise<void>
   cancelMatch: (matchId: string) => Promise<void>
   endMatch: (matchId: string, requeuePlayers: boolean) => Promise<void>
@@ -62,7 +87,15 @@ export interface AdminService {
     displayName: string,
     skillLevel: SkillLevel,
   ) => Promise<void>
-  setCourtEnabled: (courtNumber: number, enabled: boolean) => Promise<void>
+  setCourtEnabled: (courtNumber: 1 | 2 | 3, enabled: boolean) => Promise<void>
+  setMemberPaymentStatus: (playerId: string, isPaid: boolean) => Promise<void>
+  setSessionMatchDuration: (
+    sessionId: string,
+    durationSeconds: number,
+  ) => Promise<void>
+  reviewProfileLinkRequest: (requestId: string, approve: boolean) => Promise<void>
+  deleteMember: (playerId: string) => Promise<void>
+  setMemberArchived: (playerId: string, archived: boolean) => Promise<void>
   subscribe: (
     sessionId: string | null,
     onChange: () => void,
@@ -86,6 +119,7 @@ function toSession(row: ClubSessionRow): AdminSession {
     autoRequeue: row.auto_requeue,
     createdAt: row.created_at,
     openedAt: row.opened_at,
+    defaultMatchDurationSeconds: row.default_match_duration_seconds,
   }
 }
 
@@ -120,6 +154,8 @@ function mapAdminSnapshot(
   queueRows: QueueEntryRow[],
   matchRows: MatchRow[],
   matchPlayerRows: MatchPlayerRow[],
+  memberRows: Database['public']['Functions']['list_members_for_admin']['Returns'],
+  linkRequestRows: Database['public']['Functions']['list_profile_link_requests']['Returns'],
 ): AdminSnapshot {
   const activeSessionRow = sessions.find((session) => session.status === 'open') ?? null
   const players = new Map(playerRows.map((player) => [player.id, player]))
@@ -135,9 +171,10 @@ function mapAdminSnapshot(
     if (name) duplicateCounts.set(name, (duplicateCounts.get(name) ?? 0) + 1)
   }
   const duplicateIndexes = new Map<string, number>()
+  const payments = new Map(memberRows.map((member) => [member.player_id, member.is_paid]))
 
   const waitingPlayers = waitingRows
-    .map((entry): QueuePlayer | null => {
+    .map((entry): AdminQueuePlayer | null => {
       const player = players.get(entry.player_id)
       if (!player) return null
       const duplicateIndex = (duplicateIndexes.get(player.display_name) ?? 0) + 1
@@ -159,6 +196,7 @@ function mapAdminSnapshot(
           Math.floor((Date.now() - new Date(entry.queued_at).getTime()) / 60_000),
         ),
         status: 'waiting',
+        isPaid: payments.get(player.id) ?? false,
       }
     })
     .filter((player) => player !== null)
@@ -182,6 +220,9 @@ function mapAdminSnapshot(
         status: court.status,
         ...(match ? { activeMatchId: match.id } : {}),
         ...(match?.started_at ? { matchStartedAt: match.started_at } : {}),
+        ...(match?.duration_seconds
+          ? { matchDurationSeconds: match.duration_seconds }
+          : {}),
         ...(playerNames.length ? { playerNames } : {}),
       }
     })
@@ -194,6 +235,22 @@ function mapAdminSnapshot(
       .map(toSession),
     waitingPlayers,
     courts,
+    members: memberRows.map((member) => ({
+      id: member.player_id,
+      displayName: member.display_name,
+      skillLevel: member.skill_level,
+      isPaid: member.is_paid,
+      isArchived: member.is_archived,
+      createdAt: member.created_at,
+      lastJoinedAt: member.last_joined_at,
+    })),
+    profileLinkRequests: linkRequestRows.map((request) => ({
+      id: request.id,
+      targetPlayerId: request.target_player_id,
+      targetDisplayName: request.target_display_name,
+      targetSkillLevel: request.target_skill_level,
+      createdAt: request.created_at,
+    })),
   }
 }
 
@@ -246,21 +303,35 @@ export function createSupabaseAdminService(
 
     async loadSnapshot() {
       await assertAuthorized()
-      const [sessionsResult, courtsResult] = await Promise.all([
+      const [sessionsResult, courtsResult, membersResult, linkRequestsResult] = await Promise.all([
         client
           .from('club_sessions')
           .select('*')
           .in('status', ['draft', 'open'])
           .order('created_at', { ascending: false }),
         client.from('courts').select('*').order('number'),
+        client.rpc('list_members_for_admin', { p_search: null }),
+        client.rpc('list_profile_link_requests'),
       ])
       throwIfError(sessionsResult.error)
       throwIfError(courtsResult.error)
+      throwIfError(membersResult.error)
+      throwIfError(linkRequestsResult.error)
 
       const sessions = sessionsResult.data ?? []
       const activeSession = sessions.find((session) => session.status === 'open')
       if (!activeSession) {
-        return mapAdminSnapshot(sessions, courtsResult.data ?? [], [], [], [], [], [])
+        return mapAdminSnapshot(
+          sessions,
+          courtsResult.data ?? [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          membersResult.data ?? [],
+          linkRequestsResult.data ?? [],
+        )
       }
 
       const [players, sessionPlayers, queue, matches, matchPlayers] =
@@ -298,6 +369,8 @@ export function createSupabaseAdminService(
         queue.data ?? [],
         matches.data ?? [],
         matchPlayers.data ?? [],
+        membersResult.data ?? [],
+        linkRequestsResult.data ?? [],
       )
     },
 
@@ -369,6 +442,40 @@ export function createSupabaseAdminService(
       const { error } = await client.rpc('set_court_enabled', {
         p_court_number: courtNumber,
         p_enabled: enabled,
+      })
+      throwIfError(error)
+    },
+    async setMemberPaymentStatus(playerId, isPaid) {
+      const { error } = await client.rpc('set_member_payment_status', {
+        p_player_id: playerId,
+        p_is_paid: isPaid,
+      })
+      throwIfError(error)
+    },
+    async setSessionMatchDuration(sessionId, durationSeconds) {
+      const { error } = await client.rpc('set_session_match_duration', {
+        p_session_id: sessionId,
+        p_duration_seconds: durationSeconds,
+      })
+      throwIfError(error)
+    },
+    async reviewProfileLinkRequest(requestId, approve) {
+      const { error } = await client.rpc('review_profile_link_request', {
+        p_request_id: requestId,
+        p_approve: approve,
+      })
+      throwIfError(error)
+    },
+    async deleteMember(playerId) {
+      const { error } = await client.rpc('admin_delete_member', {
+        p_player_id: playerId,
+      })
+      throwIfError(error)
+    },
+    async setMemberArchived(playerId, archived) {
+      const { error } = await client.rpc('admin_set_member_archived', {
+        p_player_id: playerId,
+        p_archived: archived,
       })
       throwIfError(error)
     },

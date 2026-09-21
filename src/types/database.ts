@@ -29,6 +29,7 @@ export type Database = {
           auto_requeue: boolean
           closed_at: string | null
           created_at: string
+          default_match_duration_seconds: number
           id: string
           name: string
           opened_at: string | null
@@ -40,6 +41,7 @@ export type Database = {
           auto_requeue?: boolean
           closed_at?: string | null
           created_at?: string
+          default_match_duration_seconds?: number
           id?: string
           name: string
           opened_at?: string | null
@@ -51,6 +53,7 @@ export type Database = {
           auto_requeue?: boolean
           closed_at?: string | null
           created_at?: string
+          default_match_duration_seconds?: number
           id?: string
           name?: string
           opened_at?: string | null
@@ -113,6 +116,7 @@ export type Database = {
           called_at: string
           court_number: number
           created_at: string
+          duration_seconds: number
           ended_at: string | null
           id: string
           requeued_on_completion: boolean | null
@@ -125,6 +129,7 @@ export type Database = {
           called_at?: string
           court_number: number
           created_at?: string
+          duration_seconds?: number
           ended_at?: string | null
           id?: string
           requeued_on_completion?: boolean | null
@@ -137,6 +142,7 @@ export type Database = {
           called_at?: string
           court_number?: number
           created_at?: string
+          duration_seconds?: number
           ended_at?: string | null
           id?: string
           requeued_on_completion?: boolean | null
@@ -165,11 +171,63 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_link_requests: {
+        Row: {
+          created_at: string
+          id: string
+          requester_auth_user_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          target_player_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          requester_auth_user_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_player_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          requester_auth_user_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_player_id?: string
+        }
+        Relationships: []
+      }
+      member_payment_statuses: {
+        Row: {
+          is_paid: boolean
+          player_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          is_paid?: boolean
+          player_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          is_paid?: boolean
+          player_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       players: {
         Row: {
           created_at: string
           display_name: string
           id: string
+          is_archived: boolean
           skill_level: Database['public']['Enums']['skill_level']
           updated_at: string
         }
@@ -177,6 +235,7 @@ export type Database = {
           created_at?: string
           display_name: string
           id?: string
+          is_archived?: boolean
           skill_level: Database['public']['Enums']['skill_level']
           updated_at?: string
         }
@@ -184,6 +243,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          is_archived?: boolean
           skill_level?: Database['public']['Enums']['skill_level']
           updated_at?: string
         }
@@ -315,6 +375,18 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      list_members_for_admin: {
+        Args: { p_search?: string | null }
+        Returns: {
+          created_at: string
+          display_name: string
+          is_archived: boolean
+          is_paid: boolean
+          last_joined_at: string | null
+          player_id: string
+          skill_level: Database['public']['Enums']['skill_level']
+        }[]
+      }
       open_club_session: {
         Args: { p_session_id: string }
         Returns: undefined
@@ -322,6 +394,60 @@ export type Database = {
       set_court_enabled: {
         Args: { p_court_number: number; p_enabled: boolean }
         Returns: Database['public']['Enums']['court_status']
+      }
+      search_member_profiles: {
+        Args: { p_query: string }
+        Returns: {
+          display_name: string
+          last_joined_at: string | null
+          player_id: string
+          skill_level: Database['public']['Enums']['skill_level']
+        }[]
+      }
+      set_member_payment_status: {
+        Args: { p_is_paid: boolean; p_player_id: string }
+        Returns: undefined
+      }
+      set_session_match_duration: {
+        Args: { p_duration_seconds: number; p_session_id: string }
+        Returns: undefined
+      }
+      request_profile_link: {
+        Args: { p_player_id: string }
+        Returns: string
+      }
+      get_my_profile_link_request: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          id: string
+          reviewed_at: string | null
+          status: string
+          target_player_id: string
+        }[]
+      }
+      list_profile_link_requests: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          id: string
+          status: string
+          target_display_name: string
+          target_player_id: string
+          target_skill_level: Database['public']['Enums']['skill_level']
+        }[]
+      }
+      review_profile_link_request: {
+        Args: { p_approve: boolean; p_request_id: string }
+        Returns: undefined
+      }
+      admin_delete_member: {
+        Args: { p_player_id: string }
+        Returns: undefined
+      }
+      admin_set_member_archived: {
+        Args: { p_archived: boolean; p_player_id: string }
+        Returns: undefined
       }
       start_called_match: {
         Args: { p_match_id: string }

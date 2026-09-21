@@ -16,7 +16,7 @@ assert.equal(
   '24',
   '.nvmrc must select Node.js 24 for local and Cloudflare builds.',
 )
-assert.equal(workerConfig.name, 'queue', 'Wrangler must target the existing queue Worker.')
+assert.equal(workerConfig.name, 'badminton', 'Wrangler must prepare the badminton Worker name.')
 assert.equal(
   workerConfig.assets?.directory,
   './dist',

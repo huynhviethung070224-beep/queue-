@@ -63,7 +63,7 @@ export function MemberPage({ service }: MemberPageProps) {
     )
   }
 
-  const { session, member, queuePosition, queue, courts } = memberQueue.snapshot
+  const { session, profile, member, profileLinkRequest, queuePosition, queue, courts } = memberQueue.snapshot
   const lastUpdated = memberQueue.lastUpdatedAt?.toLocaleTimeString([], {
     hour: 'numeric',
     minute: '2-digit',
@@ -124,6 +124,19 @@ export function MemberPage({ service }: MemberPageProps) {
       {session ? (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
           <div>
+            {profile && profileLinkRequest?.status === 'approved' && !member && (
+              <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-950" role="status">
+                <p className="font-bold">Profile ready: {profile.displayName}</p>
+                <p className="mt-1 leading-5">An admin approved your access request. Join tonight&apos;s live queue when you are ready.</p>
+                <Button
+                  className="mt-3"
+                  disabled={memberQueue.isActionPending || isOffline}
+                  onClick={() => void memberQueue.joinQueue(profile.displayName, profile.skillLevel)}
+                >
+                  Join live queue
+                </Button>
+              </div>
+            )}
             {member ? (
               <PersonalStatusCard
                 player={member}
@@ -132,10 +145,38 @@ export function MemberPage({ service }: MemberPageProps) {
                 leaveDisabled={memberQueue.isActionPending || isOffline}
               />
             ) : (
-              <JoinQueueForm
-                onJoin={(displayName, skillLevel) => void memberQueue.joinQueue(displayName, skillLevel)}
-                disabled={memberQueue.isActionPending || isOffline}
-              />
+              <>
+                <JoinQueueForm
+                  key={profile?.id ?? 'new-member-profile'}
+                  initialDisplayName={profile?.displayName}
+                  initialSkillLevel={profile?.skillLevel}
+                  onJoin={(displayName, skillLevel) => void memberQueue.joinQueue(displayName, skillLevel)}
+                  onSearchProfiles={memberQueue.searchProfiles}
+                  onRequestProfileLink={memberQueue.requestProfileLink}
+                  disabled={memberQueue.isActionPending || isOffline}
+                />
+                {profile && (
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                    <p className="font-semibold text-navy-950">Wrong profile?</p>
+                    <p className="mt-1 leading-5">
+                      You can safely start over in this browser. Your previous profile and match history will not be deleted.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="mt-3"
+                      disabled={memberQueue.isActionPending || isOffline}
+                      onClick={() => {
+                        if (window.confirm('Start over with a different profile in this browser?')) {
+                          void memberQueue.resetIdentity()
+                        }
+                      }}
+                    >
+                      Use a different profile
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
             <div className="mt-4 flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs leading-5 text-slate-600">
               <RefreshCw aria-hidden="true" className="mt-0.5 shrink-0 text-emerald-600" size={15} />

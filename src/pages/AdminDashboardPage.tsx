@@ -13,15 +13,18 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
+import { getCourtDisplayName } from '../config/app'
 import { AdminCourtCard } from '../features/admin/AdminCourtCard'
 import type { AdminCourt } from '../features/admin/adminService'
 import { EditPlayerDialog } from '../features/admin/EditPlayerDialog'
+import { MemberDirectory } from '../features/admin/MemberDirectory'
+import { ProfileLinkRequests } from '../features/admin/ProfileLinkRequests'
 import { RecommendationPanel } from '../features/admin/RecommendationPanel'
 import { useAdminDashboard } from '../features/admin/useAdminDashboard'
 import { WaitingPlayersTable } from '../features/admin/WaitingPlayersTable'
 import { useAdminAuth } from '../features/auth/useAdminAuth'
 import { recommendNextGroup } from '../features/queue/fairness'
-import type { QueuePlayer } from '../types/domain'
+import type { AdminQueuePlayer } from '../types/domain'
 
 interface ConfirmationState {
   title: string
@@ -43,6 +46,66 @@ function DashboardLoading() {
   )
 }
 
+interface MatchDurationFormProps {
+  initialSeconds: number
+  disabled: boolean
+  onSave: (durationSeconds: number) => void
+}
+
+function MatchDurationForm({
+  initialSeconds,
+  disabled,
+  onSave,
+}: MatchDurationFormProps) {
+  const [minutes, setMinutes] = useState(String(initialSeconds / 60))
+  const [error, setError] = useState('')
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const parsedMinutes = Number(minutes)
+    if (!Number.isInteger(parsedMinutes) || parsedMinutes < 1 || parsedMinutes > 60) {
+      setError('Match duration must be a whole number from 1 to 60 minutes.')
+      return
+    }
+    setError('')
+    onSave(parsedMinutes * 60)
+  }
+
+  return (
+    <form
+      className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6"
+      onSubmit={submit}
+      aria-labelledby="match-duration-title"
+    >
+      <div className="max-w-2xl">
+        <h2 id="match-duration-title" className="font-bold text-navy-950">
+          Default countdown for new matches
+        </h2>
+        <p className="mt-1 text-sm leading-6 text-slate-600">
+          Each called match copies this value. Saving a new default never resets or changes a running match.
+        </p>
+        {error && <p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}
+      </div>
+      <div className="flex items-end gap-2">
+        <div>
+          <label htmlFor="match-duration" className="form-label">Minutes</label>
+          <input
+            id="match-duration"
+            type="number"
+            min="1"
+            max="60"
+            step="1"
+            className="form-control w-28"
+            value={minutes}
+            onChange={(event) => setMinutes(event.target.value)}
+          />
+        </div>
+        <Button type="submit" disabled={disabled}>Save default</Button>
+      </div>
+    </form>
+  )
+}
+
 export function AdminDashboardPage() {
   const navigate = useNavigate()
   const auth = useAdminAuth()
@@ -50,7 +113,7 @@ export function AdminDashboardPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [selectedCourt, setSelectedCourt] = useState('1')
   const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null)
-  const [editingPlayer, setEditingPlayer] = useState<QueuePlayer | null>(null)
+  const [editingPlayer, setEditingPlayer] = useState<AdminQueuePlayer | null>(null)
   const [newSessionName, setNewSessionName] = useState('')
   const [newSessionAutoRequeue, setNewSessionAutoRequeue] = useState(true)
   const [requeueOverride, setRequeueOverride] = useState<boolean | null>(null)
@@ -110,7 +173,7 @@ export function AdminDashboardPage() {
       return
     }
     setPageError('')
-    if (await dashboard.assignPlayers(courtNumber, [...selectedIds])) {
+    if (await dashboard.assignPlayers(court.number, [...selectedIds])) {
       setSelectedIds(new Set())
     }
   }
@@ -120,22 +183,23 @@ export function AdminDashboardPage() {
     action: 'start' | 'cancel' | 'end' | 'toggle',
   ) {
     setPageError('')
+    const courtDisplayName = getCourtDisplayName(court.number)
     if (action === 'toggle') {
       void dashboard.setCourtEnabled(court.number, court.status === 'disabled')
       return
     }
     if (!court.activeMatchId) {
-      setPageError(`${court.name} does not have an active match record.`)
+      setPageError(`${courtDisplayName} does not have an active match record.`)
       return
     }
     if (action === 'start') {
-      void dashboard.startMatch(court.activeMatchId, court.name)
+      void dashboard.startMatch(court.activeMatchId, courtDisplayName)
       return
     }
 
     const matchId = court.activeMatchId
     setConfirmation({
-      title: action === 'end' ? `End match on ${court.name}?` : `Cancel call on ${court.name}?`,
+      title: action === 'end' ? `End match on ${courtDisplayName}?` : `Cancel call on ${courtDisplayName}?`,
       description:
         action === 'end'
           ? `This completes all four queue entries and ${requeuePlayers ? 'returns the players to the queue' : 'marks the players inactive'}.`
@@ -145,14 +209,14 @@ export function AdminDashboardPage() {
       onConfirm: async () => {
         const success =
           action === 'end'
-            ? await dashboard.endMatch(matchId, court.name, requeuePlayers)
-            : await dashboard.cancelMatch(matchId, court.name)
+            ? await dashboard.endMatch(matchId, courtDisplayName, requeuePlayers)
+            : await dashboard.cancelMatch(matchId, courtDisplayName)
         if (success) setConfirmation(null)
       },
     })
   }
 
-  function requestPlayerRemoval(player: QueuePlayer) {
+  function requestPlayerRemoval(player: AdminQueuePlayer) {
     if (!activeSession) return
     setConfirmation({
       title: `Remove ${player.displayName}?`,
@@ -173,6 +237,32 @@ export function AdminDashboardPage() {
           })
           setConfirmation(null)
         }
+      },
+    })
+  }
+
+  function requestMemberDeletion(playerId: string, displayName: string) {
+    setConfirmation({
+      title: `Permanently delete ${displayName}?`,
+      description: 'This permanently deletes the profile, identity, payments, queue entries, and every match record involving this member. This cannot be undone.',
+      confirmLabel: 'Permanently delete',
+      danger: true,
+      onConfirm: async () => {
+        if (await dashboard.deleteMember(playerId, displayName)) setConfirmation(null)
+      },
+    })
+  }
+
+  function requestMemberArchive(playerId: string, displayName: string, archived: boolean) {
+    setConfirmation({
+      title: `${archived ? 'Archive' : 'Restore'} ${displayName}?`,
+      description: archived
+        ? 'This hides the member from profile search and prevents new queue entries while preserving all match history.'
+        : 'This makes the member visible to profile search and eligible to join future sessions again.',
+      confirmLabel: archived ? 'Archive member' : 'Restore member',
+      danger: archived,
+      onConfirm: async () => {
+        if (await dashboard.setMemberArchived(playerId, displayName, archived)) setConfirmation(null)
       },
     })
   }
@@ -256,6 +346,22 @@ export function AdminDashboardPage() {
         <Settings2 aria-hidden="true" size={17} /> {dashboard.notice}
       </div>
 
+      {dashboard.unpaidNotice && (
+        <div
+          role="status"
+          className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <span>{dashboard.unpaidNotice}</span>
+          <Button
+            variant="ghost"
+            className="shrink-0"
+            onClick={dashboard.dismissUnpaidNotice}
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
+
       {!activeSession && (
         <section className="grid gap-6 lg:grid-cols-2" aria-label="Session setup">
           <form className="card p-5 sm:p-6" onSubmit={createSession}>
@@ -307,6 +413,15 @@ export function AdminDashboardPage() {
             </div>
           </section>
 
+          <MatchDurationForm
+            key={`${activeSession.id}-${activeSession.defaultMatchDurationSeconds}`}
+            initialSeconds={activeSession.defaultMatchDurationSeconds}
+            disabled={actionDisabled}
+            onSave={(durationSeconds) =>
+              void dashboard.setSessionMatchDuration(activeSession.id, durationSeconds)
+            }
+          />
+
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
             <WaitingPlayersTable players={players} selectedIds={selectedIds} onToggle={togglePlayer} onEdit={setEditingPlayer} onRemove={requestPlayerRemoval} disabled={actionDisabled} />
             <div className="space-y-4">
@@ -322,7 +437,7 @@ export function AdminDashboardPage() {
                 <p className="mt-1 text-sm text-slate-500">Exactly four currently waiting players are required.</p>
                 <label htmlFor="court-selection" className="form-label mt-4">Available court</label>
                 <select id="court-selection" disabled={actionDisabled} className="form-control" value={selectedCourt} onChange={(event) => setSelectedCourt(event.target.value)}>
-                  {courts.map((court) => <option key={court.number} value={court.number} disabled={court.status !== 'available'}>{court.name} — {court.status}</option>)}
+                  {courts.map((court) => <option key={court.number} value={court.number} disabled={court.status !== 'available'}>{getCourtDisplayName(court.number)} — {court.status}</option>)}
                 </select>
                 <Button className="mt-4 w-full" disabled={actionDisabled || selectedIds.size !== 4} onClick={() => void assignPlayers()}>Call four players</Button>
                 {selectedIds.size === 4 && recommendedPlayers.some((player) => !selectedIds.has(player.id)) && <p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs leading-5 text-amber-900">Manual override: this selection differs from the current fairness order. Confirm compatibility before calling.</p>}
@@ -331,6 +446,26 @@ export function AdminDashboardPage() {
           </div>
         </>
       )}
+
+      <MemberDirectory
+        members={snapshot.members}
+        disabled={actionDisabled}
+        pendingAction={dashboard.pendingAction}
+        onSetPayment={(playerId, displayName, isPaid) =>
+          void dashboard.setMemberPaymentStatus(playerId, displayName, isPaid)
+        }
+        onDelete={requestMemberDeletion}
+        onSetArchived={requestMemberArchive}
+      />
+
+      <ProfileLinkRequests
+        requests={snapshot.profileLinkRequests}
+        disabled={actionDisabled}
+        pendingAction={dashboard.pendingAction}
+        onReview={(requestId, approve, displayName) =>
+          void dashboard.reviewProfileLinkRequest(requestId, approve, displayName)
+        }
+      />
 
       <ConfirmDialog
         open={Boolean(confirmation)}

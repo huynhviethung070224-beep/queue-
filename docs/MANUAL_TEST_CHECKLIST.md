@@ -33,10 +33,10 @@ Record the environment, browser, tester, date, and result. Historical Phase 1 it
 
 ## Authorization and admin lifecycle after Phase 4
 
-- [x] `npm run db:validate` reports 6 migrations, 9 RLS tables, and 12 state-change RPCs.
+- [x] `npm run db:validate` reports 7 migrations, 10 RLS tables, and 14 state-change RPCs.
 - [ ] Applying all migrations to a new Supabase project succeeds in filename order.
 - [x] The `courts` table contains only Court 1, Court 2, and Court 3.
-- [x] The RLS audit query reports `rowsecurity = true` for all nine application tables.
+- [ ] After migration 7 is applied, the RLS audit reports `rowsecurity = true` for all ten application tables.
 - [x] The security-definer audit shows an empty `search_path` for every security-definer function.
 - [x] `anon` and `authenticated` have no direct insert, update, or delete table privileges.
 - [x] Anonymous member direct writes to protected tables fail.
@@ -63,6 +63,36 @@ Use the two-client procedure and expected database invariants in `CONCURRENCY_RE
 - [ ] A member refreshes while called or playing; identity and state remain correct.
 - [ ] A client disconnects while state changes, reconnects, and receives authoritative state.
 - [ ] Matches on multiple courts end close together; every game count and requeue entry is correct.
+
+## Approved feedback 2–5 manual checks
+
+Migrations 7 and 8 are now applied to the linked project. Items are checked only where the 2026-09-21 production verification exercised the exact behavior; credentialed admin and destructive lifecycle checks remain manual.
+
+- [ ] Join once, leave/end the session, open a later session in the same browser origin, and confirm the same stable profile is restored and prefilled.
+- [ ] Search a duplicate display name and confirm suggestions show skill/last-joined context without exposing payment or Auth UUIDs.
+- [ ] Request ownership for an old-profile suggestion, confirm the pending request appears to the admin, and verify the member remains unlinked until approval.
+- [ ] As admin, reject an ownership request and confirm the requester remains unlinked.
+- [ ] As admin, verify the person in front of you, approve an ownership request, and confirm the requesting browser sees the old profile after refresh while the previous identity no longer owns it.
+- [ ] After approval, confirm the member browser shows **Profile verified** and **Join live queue**, then confirm the name appears in the live queue only after the member presses that button.
+- [ ] Create a genuinely new profile and confirm exactly one persistent player/identity/payment row exists, defaulting to Unpaid.
+- [ ] Confirm a new browser/origin cannot claim an old profile by name. Cross-device linking remains unavailable pending the documented one-time-code design.
+- [ ] As admin, search the persistent member directory, mark a member Paid, refresh/reopen a later session, and confirm Paid persists.
+- [ ] As admin, confirm **Delete member** requires confirmation, deletes a disposable duplicate with no match history, and removes it from the directory.
+- [ ] Confirm the delete RPC refuses a member with active queue state or match history.
+- [ ] As admin, archive a member with match history, confirm it remains in historical records but disappears from member search, then restore it.
+- [ ] Confirm an archived profile cannot create a new queue entry until restored.
+- [x] As a member, confirm payment status/list is absent from the member UI and direct table reads plus admin directory/payment RPCs are denied; static validation confirms payment data is excluded from Realtime.
+- [ ] Join as an Unpaid member and confirm joining succeeds, fairness position is unchanged, and admin receives one Unpaid notice.
+- [ ] Trigger ordinary Realtime refetch/reconnect and confirm the same Unpaid join notice does not repeat in the current admin page session.
+- [ ] Set the session default to 7 minutes, call/start matches on two courts at different times, and confirm independent countdowns.
+- [ ] Change the default while a match is playing and confirm that running/called match duration does not reset or change; only later matches use the new value.
+- [ ] Let a countdown reach zero and confirm `Time’s up` appears with no automatic End, game increment, lifecycle change, or requeue.
+- [x] Confirm the production member page shows `Court 1 · Advanced`, `Court 2 · Beginner`, and `Court 3 · Intermediate`; authenticated admin display remains pending.
+- [ ] Manually assign any valid skill group to any court and confirm labels do not block assignment or change recommendations.
+- [x] Before the URL change, inventory other Workers, verify `drexel-queue` through Cloudflare, and record the account-wide subdomain effect.
+- [x] After the authorized deploy, verify direct refresh for `/`, `/admin/login`, `/admin`, and `/not-a-route` on the exact new origin.
+- [ ] Verify the Supabase Site URL and Redirect URLs in the dashboard against the exact new origin.
+- [x] Verify and communicate that old-origin browser identity/storage does not transfer automatically to the new origin.
 
 ## Final release checks
 
@@ -114,9 +144,28 @@ Completed on 2026-08-25 with Node.js 24 and npm 11:
 - [x] GitHub Actions uses Node.js 24, `npm ci`, all required code/database checks, the production build, deployment-artifact validation, and bundle scanning.
 - [x] `wrangler.jsonc` targets `dist` with `single-page-application` fallback, no incompatible `_redirects` file is emitted, and the build contains the SPA entry, JavaScript, and CSS artifacts.
 - [x] The production bundle scan found no database URL/password, private key, Supabase secret key, or service-role JWT pattern.
-- [x] Wrangler dry-run accepts the `queue` Worker configuration and packages `dist` without the previous infinite-loop redirect error.
+- [x] Wrangler dry-run accepts the current `badminton` Worker configuration and packages `dist` without the previous infinite-loop redirect error.
 - [x] Cloudflare Worker deployment succeeds and direct refresh serves the SPA on `/`, `/admin/login`, `/admin`, and an unknown route.
 - [x] The deployed member route creates an anonymous Auth session, reads live state, denies an anonymous admin RPC, and recovers after an offline/reconnect cycle without baseline or post-reconnect browser errors.
 - [ ] Production and Preview Workers Build triggers still need `NODE_VERSION`, `VITE_SUPABASE_URL`, and `VITE_SUPABASE_ANON_KEY`; until then, a Git-triggered build can overwrite the configured direct deployment with an unconfigured bundle.
 - [ ] Production/preview Supabase Site URL and Redirect URLs still require the final deployed origins and Supabase account access.
 - [ ] Optional custom domain and TLS verification remain intentionally unstarted.
+
+## Feedback 2–5 deployment record
+
+Built, migrated, and directly deployed on 2026-09-21; the feedback worktree remains uncommitted and unpushed:
+
+- [x] Same-browser profile restoration remains bound to the existing anonymous Auth identity; old-profile search cannot mutate/link identities.
+- [x] Payment is stored in a separate RLS table, defaults to Unpaid, is excluded from Realtime/member UI, and changes only through an admin-authorized RPC.
+- [x] Payment fields do not enter the pure fairness/recommendation functions; automated coverage compares fairness under reversed payment values.
+- [x] Match duration is persisted per session/match, copied only on match insert, and rendered as independent countdowns with no automatic lifecycle callback.
+- [x] Court guidance labels are centralized display configuration only.
+- [x] `wrangler.jsonc` and deployment validation target Worker `badminton`; Cloudflare account subdomain is `drexel-queue` and the final origin is deployed.
+- [x] Clean `npm ci`, lint, type checking, 56 automated tests, database validation, production build, Worker dry-run, deployment validation, bundle-secret scan, and `git diff --check` pass.
+- [x] The live member route has no horizontal overflow at 320 × 800, restores correctly after refresh, and reports no browser console warning/error.
+- [x] Offline mode shows last-known state and disables member mutations; reconnect removes the warning, restores controls, and reaches a clean Realtime subscription.
+- [x] Anonymous Auth, profile search, protected admin-RPC denial, payment-table RLS, and Realtime subscription pass against the linked Supabase project.
+- [x] `/admin` redirects an unauthenticated browser to `/admin/login`, and both routes survive direct refresh.
+- [x] The deployed member UI shows existing-profile suggestions and the new **Request ownership** action without linking by name.
+- [ ] Credentialed admin directory/payment/countdown controls still require the owner's admin password for production browser verification.
+- [ ] Cloudflare Production/Preview Git-build variables and Supabase Site URL/Redirect URLs still require dashboard verification.

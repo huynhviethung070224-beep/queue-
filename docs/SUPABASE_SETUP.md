@@ -29,6 +29,7 @@ Migrations are append-only and must run in filename order:
 4. `20260824103000_enable_member_realtime.sql`
 5. `20260825150000_grant_rls_helper_execution.sql`
 6. `20260825153000_fix_join_queue_conflict_target.sql`
+7. `20260921090000_member_payments_and_match_timers.sql`
 
 ### Recommended CLI method
 
@@ -68,6 +69,7 @@ join pg_catalog.pg_namespace as n on n.oid = c.relnamespace
 where n.nspname = 'public'
   and c.relname in (
     'players',
+    'member_payment_statuses',
     'player_identities',
     'admin_users',
     'club_sessions',
@@ -80,7 +82,7 @@ where n.nspname = 'public'
 order by c.relname;
 ```
 
-All nine rows must report `rls_enabled = true`.
+All ten rows must report `rls_enabled = true`.
 
 Confirm the fixed courts:
 
@@ -155,7 +157,9 @@ where pubname = 'supabase_realtime'
 order by schemaname, tablename;
 ```
 
-The result must include `club_sessions`, `players`, `session_players`, `queue_entries`, `courts`, `matches`, and `match_players`. It must not include `player_identities` or `admin_users` because those tables contain authorization-sensitive mappings.
+The result must include `club_sessions`, `players`, `session_players`, `queue_entries`, `courts`, `matches`, and `match_players`. It must not include `player_identities`, `admin_users`, or `member_payment_statuses` because those tables contain authorization-sensitive or private membership mappings.
+
+After migration 7, verify that existing/new sessions default to `420` seconds, every new match copies its session duration, and changing the session default does not update existing match rows. Verify `member_payment_statuses` contains one default-Unpaid row per player and is unreadable to a member session.
 
 ## 7. Verify function security
 

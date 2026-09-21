@@ -97,6 +97,12 @@ export function useMemberQueue(providedService?: MemberService) {
   }, [loadSnapshot, service, snapshot?.session?.id, userId])
 
   useEffect(() => {
+    if (!service || !userId) return
+    const timer = window.setInterval(() => void loadSnapshot(userId), 5000)
+    return () => window.clearInterval(timer)
+  }, [loadSnapshot, service, userId])
+
+  useEffect(() => {
     function handleOffline() {
       setConnection('offline')
     }
@@ -147,6 +153,44 @@ export function useMemberQueue(providedService?: MemberService) {
     }
   }
 
+  async function searchProfiles(query: string) {
+    if (!service || !userId) return []
+    return service.searchProfiles(query)
+  }
+
+  async function requestProfileLink(playerId: string, displayName: string) {
+    if (!service || !userId || isActionPending) return
+    setIsActionPending(true)
+    setError(null)
+    try {
+      await service.requestProfileLink(playerId)
+    } catch (requestError) {
+      setError(
+        getErrorMessage(requestError) ||
+          `Could not request ownership of ${displayName}.`,
+      )
+      throw requestError
+    } finally {
+      setIsActionPending(false)
+    }
+  }
+
+  async function resetIdentity() {
+    if (!service?.resetIdentity || isActionPending) return
+    setIsActionPending(true)
+    setError(null)
+    try {
+      await service.resetIdentity()
+      setSnapshot(null)
+      setUserId(null)
+      await initialize()
+    } catch (resetError) {
+      setError(getErrorMessage(resetError))
+    } finally {
+      setIsActionPending(false)
+    }
+  }
+
   return {
     configured: Boolean(service),
     snapshot: snapshot ? refreshWaitTimes(snapshot, now) : null,
@@ -157,6 +201,9 @@ export function useMemberQueue(providedService?: MemberService) {
     lastUpdatedAt,
     joinQueue,
     leaveQueue,
+    searchProfiles,
+    requestProfileLink,
+    resetIdentity,
     retry: initialize,
   }
 }

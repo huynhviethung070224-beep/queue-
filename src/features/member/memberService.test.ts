@@ -14,7 +14,9 @@ function authClient(sessionUserId: string | null) {
     data: { user: { id: 'new-anonymous-user' } },
     error: null,
   }))
-  const rpc = vi.fn(async () => ({ data: null, error: null }))
+  const rpc = vi.fn(
+    async (): Promise<{ data: unknown; error: null }> => ({ data: null, error: null }),
+  )
   const client = {
     auth: { getSession, signInAnonymously },
     rpc,
@@ -55,6 +57,36 @@ describe('Supabase member service', () => {
       p_skill_level: 'intermediate',
     })
     expect(rpc).toHaveBeenNthCalledWith(2, 'leave_current_queue')
+  })
+
+  it('searches persistent profiles without linking or mutating an identity', async () => {
+    const { client, rpc } = authClient('new-device-user')
+    rpc.mockResolvedValueOnce({
+      data: [
+        {
+          player_id: 'player-existing',
+          display_name: 'Ian H.',
+          skill_level: 'intermediate',
+          last_joined_at: '2026-09-01T00:00:00.000Z',
+        },
+      ],
+      error: null,
+    })
+
+    await expect(
+      createSupabaseMemberService(client).searchProfiles(' Ian '),
+    ).resolves.toEqual([
+      {
+        id: 'player-existing',
+        displayName: 'Ian H.',
+        skillLevel: 'intermediate',
+        lastJoinedAt: '2026-09-01T00:00:00.000Z',
+      },
+    ])
+    expect(rpc).toHaveBeenCalledOnce()
+    expect(rpc).toHaveBeenCalledWith('search_member_profiles', {
+      p_query: 'Ian',
+    })
   })
 
   it('owns one filtered live channel and removes it during cleanup', () => {

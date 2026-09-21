@@ -100,6 +100,19 @@ describe('fairness ordering', () => {
     sortByFairness(input)
     expect(input).toEqual(original)
   })
+
+  it('ignores private payment status when ordering players', () => {
+    const input = [
+      { ...player('2'), isPaid: false },
+      { ...player('1'), isPaid: true },
+    ]
+    const reversedPayments = input.map((item) => ({
+      ...item,
+      isPaid: !item.isPaid,
+    }))
+
+    expect(ids(sortByFairness(input))).toEqual(ids(sortByFairness(reversedPayments)))
+  })
 })
 
 describe('skill-compatible recommendations', () => {

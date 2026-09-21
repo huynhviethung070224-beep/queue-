@@ -4,7 +4,7 @@ A mobile-first queue and three-court management application for a small badminto
 
 ## Current status
 
-Phase 6 deployment readiness is implemented. Members use anonymous Supabase Auth, and administrators use email/password Auth plus database allowlist authorization. Member and admin state comes from PostgreSQL, mutations use the security-definer RPC surface, and focused Realtime events trigger authoritative refetches. Pure TypeScript recommendations apply session fairness before skill compatibility. GitHub Actions, Node.js 24 pinning, Cloudflare Workers Static Assets SPA routing, deployment validation, and production-bundle credential scanning are configured. No private Supabase credential or admin account detail is included in the repository.
+Phase 6 and the approved post-release feedback 2–5 are deployed at [badminton.drexel-queue.workers.dev](https://badminton.drexel-queue.workers.dev/). Members use anonymous Supabase Auth with same-browser profile restoration and safe existing-name discovery; selecting a name never claims that identity. Administrators have a private persistent member/payment directory. Matches copy a configurable seven-minute default into an independent persisted countdown, and the three court skill labels remain guidance only. Pure TypeScript fairness remains independent of payment and court labels. No private Supabase credential or admin account detail is included in the repository.
 
 ## Stack
 
@@ -17,7 +17,7 @@ Phase 6 deployment readiness is implemented. Members use anonymous Supabase Auth
 - npm
 - Supabase JavaScript client and PostgreSQL migrations
 
-The reviewed Phase 3–6 work is committed and pushed. The connected Cloudflare Worker builds `dist` from `main`; `wrangler.jsonc` provides the required SPA route fallback.
+The reviewed Phase 3–6 baseline is committed and pushed. Migration 7 is applied to the linked Supabase project and the current feedback 2–5 worktree was deployed directly to the `badminton` Worker, but these feedback changes remain uncommitted and unpushed. A later Git-triggered Cloudflare build must not replace this direct deployment until the intended changes and build environment are reviewed and pushed.
 
 ## Local development
 
@@ -72,4 +72,4 @@ Never place the Supabase service-role key in frontend code or a `VITE_` variable
 
 ## Current limitations
 
-The linked test project has one authorized admin, so the two-admin race scenarios and the multi-court completion race remain manual release checks. Deployed route refreshes, member/admin flows, and final Supabase production URLs must be verified against the Worker URL. Follow `docs/CONCURRENCY_REVIEW.md` and `docs/DEPLOYMENT.md` before production use.
+Cross-device profile linking now uses a pending request that an admin must explicitly approve or reject; it is not linked by selecting a name. The admin directory also provides confirmation-gated Delete and Archive/Restore actions. Delete is limited to duplicate profiles without history; Archive preserves match history, hides the profile from member search, and blocks new joins. The linked project has one authorized admin, so the new approval and cleanup flows, two-admin races, and the multi-court completion race still need manual verification. Cloudflare Production/Preview build variables and the Supabase Auth Site URL/Redirect URLs still require dashboard review. Browser identity from the retired old origin does not transfer to the new origin.

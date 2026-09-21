@@ -17,11 +17,16 @@ export interface QueuePlayer {
   courtNumber?: 1 | 2 | 3
 }
 
+export interface AdminQueuePlayer extends QueuePlayer {
+  isPaid: boolean
+}
+
 export interface Court {
   number: 1 | 2 | 3
   name: string
   status: CourtStatus
   matchStartedAt?: string
+  matchDurationSeconds?: number
   playerNames?: string[]
 }
 

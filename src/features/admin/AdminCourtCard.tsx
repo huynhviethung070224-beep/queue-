@@ -2,6 +2,11 @@ import { Clock3, MapPin } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { getCourtDisplayName } from '../../config/app'
+import {
+  formatRemainingMatchTime,
+  getRemainingMatchSeconds,
+} from '../courts/matchTimer'
 import type { AdminCourt } from './adminService'
 
 interface AdminCourtCardProps {
@@ -18,26 +23,26 @@ export function AdminCourtCard({
   disabled = false,
   onAction,
 }: AdminCourtCardProps) {
-  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [remainingSeconds, setRemainingSeconds] = useState(
+    court.matchDurationSeconds ?? 0,
+  )
 
   useEffect(() => {
     const matchStartedAt = court.matchStartedAt
     if (court.status !== 'playing' || !matchStartedAt) return
-    const updateElapsed = () => {
-      setElapsedSeconds(
-        Math.max(
-          0,
-          Math.floor((Date.now() - new Date(matchStartedAt).getTime()) / 1_000),
-        ),
+    const durationSeconds = court.matchDurationSeconds
+    if (!durationSeconds) return
+    const updateRemaining = () => {
+      setRemainingSeconds(
+        getRemainingMatchSeconds(matchStartedAt, durationSeconds),
       )
     }
-    const initialTimer = window.setTimeout(updateElapsed, 0)
-    const interval = window.setInterval(updateElapsed, 1_000)
+    updateRemaining()
+    const interval = window.setInterval(updateRemaining, 1_000)
     return () => {
-      window.clearTimeout(initialTimer)
       window.clearInterval(interval)
     }
-  }, [court.matchStartedAt, court.status])
+  }, [court.matchDurationSeconds, court.matchStartedAt, court.status])
 
   return (
     <article className="card p-5">
@@ -46,7 +51,7 @@ export function AdminCourtCard({
           <span className="grid size-9 place-items-center rounded-lg bg-slate-100 text-navy-950">
             <MapPin aria-hidden="true" size={18} />
           </span>
-          <h3 className="font-bold text-navy-950">{court.name}</h3>
+          <h3 className="font-bold text-navy-950">{getCourtDisplayName(court.number)}</h3>
         </div>
         <StatusBadge kind="status" value={court.status} />
       </div>
@@ -55,8 +60,10 @@ export function AdminCourtCard({
         {court.playerNames ? court.playerNames.join(' · ') : 'No active match'}
         {court.status === 'playing' && (
           <span className="mt-2 flex items-center gap-1.5 font-semibold text-fuchsia-700">
-            <Clock3 aria-hidden="true" size={15} /> {Math.floor(elapsedSeconds / 60)}m{' '}
-            {elapsedSeconds % 60}s elapsed
+            <Clock3 aria-hidden="true" size={15} />{' '}
+            {remainingSeconds === 0
+              ? 'Time’s up'
+              : `${formatRemainingMatchTime(remainingSeconds)} remaining`}
           </span>
         )}
       </div>
