@@ -409,7 +409,7 @@ export function AdminDashboardPage() {
           <section aria-labelledby="court-management-title">
             <div className="mb-4"><p className="eyebrow">Live controls</p><h2 id="court-management-title" className="mt-1 text-xl font-bold text-navy-950">Court management</h2></div>
             <div className="grid gap-4 lg:grid-cols-3">
-              {courts.map((court) => <AdminCourtCard key={court.number} court={court} disabled={actionDisabled} onAction={handleCourtAction} />)}
+              {[...courts].sort((left, right) => right.number - left.number).map((court) => <AdminCourtCard key={court.number} court={court} disabled={actionDisabled} onAction={handleCourtAction} />)}
             </div>
           </section>
 

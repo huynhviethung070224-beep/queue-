@@ -1,6 +1,7 @@
 import { AlertCircle, CloudOff, LoaderCircle, Radio, RefreshCw } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { CourtCard } from '../features/courts/CourtCard'
+import { RecreationCenterMap } from '../features/courts/RecreationCenterMap'
 import { JoinQueueForm } from '../features/member/JoinQueueForm'
 import { LiveQueueList } from '../features/member/LiveQueueList'
 import type { MemberService } from '../features/member/memberService'
@@ -185,8 +186,11 @@ export function MemberPage({ service }: MemberPageProps) {
           <span className="text-xs text-slate-500">{courts.length} courts total</span>
         </div>
         {courts.length ? (
-          <div className="grid gap-4 md:grid-cols-3">
-            {courts.map((court) => <CourtCard key={court.number} court={court} />)}
+          <div className="space-y-4">
+            <RecreationCenterMap courts={courts} member={member} />
+            <div className="grid gap-4 md:grid-cols-3">
+              {[...courts].sort((left, right) => right.number - left.number).map((court) => <CourtCard key={court.number} court={court} />)}
+            </div>
           </div>
         ) : (
           <div className="card px-6 py-8 text-center text-sm text-slate-500">

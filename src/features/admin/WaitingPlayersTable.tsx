@@ -1,6 +1,8 @@
 import { Pencil, Trash2 } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { PresidentBadge } from '../../components/ui/RoleBadge'
+import { isPresident } from '../../components/ui/role'
 import type { AdminQueuePlayer } from '../../types/domain'
 
 interface WaitingPlayersTableProps {
@@ -71,6 +73,7 @@ export function WaitingPlayersTable({
                   <td className="px-4 py-4 font-semibold text-slate-900">
                     <span className="mr-2 text-xs text-slate-400">#{index + 1}</span>
                     {player.displayName}
+                    {isPresident(player.displayName) && <PresidentBadge />}
                     {!player.isPaid && (
                       <span className="ml-2 rounded-full bg-amber-100 px-2 py-1 text-xs font-bold text-amber-900">
                         Unpaid
@@ -115,6 +118,7 @@ export function WaitingPlayersTable({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-slate-900">#{index + 1} {player.displayName}</span>
+                    {isPresident(player.displayName) && <PresidentBadge />}
                     <StatusBadge kind="skill" value={player.skillLevel} />
                     {!player.isPaid && (
                       <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-bold text-amber-900">

@@ -2,6 +2,8 @@ import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { PresidentBadge } from '../../components/ui/RoleBadge'
+import { isPresident } from '../../components/ui/role'
 import type { AdminMember } from './adminService'
 
 interface MemberDirectoryProps {
@@ -79,6 +81,7 @@ export function MemberDirectory({
       ) : (
         <ul className="max-h-96 divide-y divide-slate-100 overflow-y-auto">
           {visibleMembers.map((member) => {
+            const president = !member.isArchived && isPresident(member.displayName)
             const pending = pendingAction === `payment-${member.id}`
             const deleting = pendingAction === `delete-member-${member.id}`
             const archiving = pendingAction === `archive-member-${member.id}`
@@ -93,6 +96,7 @@ export function MemberDirectory({
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <StatusBadge kind="skill" value={member.skillLevel} />
+                    {president && <PresidentBadge />}
                     {member.isArchived && <span className="rounded-full bg-slate-200 px-2 py-1 text-xs font-bold text-slate-700">Archived</span>}
                     <span
                       className={`rounded-full px-2 py-1 text-xs font-bold ${member.isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}`}

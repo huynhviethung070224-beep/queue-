@@ -63,7 +63,14 @@ function createMemberService() {
     }),
   }
 
-  return { service, cleanup, emitChange: () => changeListener?.() }
+  return {
+    service,
+    cleanup,
+    emitChange: () => changeListener?.(),
+    setCurrentMember: (member: QueuePlayer | null) => {
+      currentMember = member
+    },
+  }
 }
 
 function adminSnapshot(): AdminSnapshot {
@@ -197,6 +204,24 @@ describe('application routes and major states', () => {
 
     view.unmount()
     expect(cleanup).toHaveBeenCalledOnce()
+  })
+
+  it('updates the assigned court map after authoritative Realtime refetches', async () => {
+    const { service, emitChange, setCurrentMember } = createMemberService()
+    renderRoute('/', service)
+
+    await screen.findByRole('heading', { name: 'Find your court' })
+    expect(screen.queryByText('Your court')).not.toBeInTheDocument()
+
+    setCurrentMember({ ...waitingPlayer, status: 'called', courtNumber: 3 })
+    act(() => emitChange())
+    expect(await screen.findByText('You are assigned to Court 3 — Intermediate.')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Court 3 — Intermediate.*your court/i)).toHaveAttribute('data-assigned', 'true')
+
+    setCurrentMember({ ...waitingPlayer, status: 'waiting' })
+    act(() => emitChange())
+    expect(await screen.findByText('You are currently waiting for a court assignment.')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Your court')).not.toBeInTheDocument())
   })
 
   it('keeps the last snapshot offline and refetches after reconnect', async () => {

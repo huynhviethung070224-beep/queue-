@@ -1,6 +1,8 @@
 import { Clock3, MapPin, Trophy } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { PresidentBadge } from '../../components/ui/RoleBadge'
+import { isPresident } from '../../components/ui/role'
 import type { QueuePlayer } from '../../types/domain'
 
 interface PersonalStatusCardProps {
@@ -46,6 +48,7 @@ export function PersonalStatusCard({
             <p className="eyebrow">Your status</p>
             <h2 id="your-status-title" className="mt-1 text-xl font-bold text-navy-950">
               {player.displayName}
+              {isPresident(player.displayName) && <span className="ml-2 align-middle"><PresidentBadge /></span>}
             </h2>
           </div>
           <div className="flex flex-wrap gap-2">

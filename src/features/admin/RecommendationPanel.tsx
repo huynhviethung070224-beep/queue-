@@ -1,6 +1,8 @@
 import { CheckCircle2, Sparkles } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { PresidentBadge } from '../../components/ui/RoleBadge'
+import { isPresident } from '../../components/ui/role'
 import type { QueuePlayer } from '../../types/domain'
 
 interface RecommendationPanelProps {
@@ -36,6 +38,7 @@ export function RecommendationPanel({
               <span className="min-w-0 truncate text-sm font-semibold text-slate-900">
                 {player.displayName}
               </span>
+              {isPresident(player.displayName) && <PresidentBadge />}
               <StatusBadge kind="skill" value={player.skillLevel} />
             </li>
             ))}

@@ -1,5 +1,7 @@
 import { Clock3, Users } from 'lucide-react'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { PresidentBadge } from '../../components/ui/RoleBadge'
+import { isPresident } from '../../components/ui/role'
 import type { QueuePlayer } from '../../types/domain'
 
 interface LiveQueueListProps {
@@ -40,6 +42,7 @@ export function LiveQueueList({ players }: LiveQueueListProps) {
                   <span className="truncate font-semibold text-slate-900">
                     {player.displayName}
                   </span>
+                  {isPresident(player.displayName) && <PresidentBadge />}
                   {player.duplicateSuffix && (
                     <span className="text-xs text-slate-500">{player.duplicateSuffix}</span>
                   )}
