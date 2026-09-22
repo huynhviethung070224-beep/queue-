@@ -26,15 +26,30 @@ export interface MemberSnapshot {
   queue: QueuePlayer[]
   courts: Court[]
   profileLinkRequest: ProfileLinkRequest | null
+  memberRequest?: MemberRequest | null
 }
 
 export interface MemberProfile {
   id: string
+  drexelUserId: string | null
   displayName: string
   skillLevel: SkillLevel
 }
 
-export interface MemberProfileSuggestion extends MemberProfile {
+export interface MemberRequest {
+  id: string
+  type: 'create_profile' | 'link_new_device' | 'change_skill_level'
+  status: 'pending' | 'approved' | 'rejected'
+  drexelUserId: string
+  displayName: string | null
+  requestedSkillLevel: SkillLevel | null
+  rejectionReason: string | null
+}
+
+export interface MemberProfileSuggestion {
+  id: string
+  displayName: string
+  skillLevel: SkillLevel
   lastJoinedAt: string | null
 }
 
@@ -53,6 +68,10 @@ export interface MemberService {
   joinQueue: (displayName: string, skillLevel: SkillLevel) => Promise<void>
   leaveQueue: () => Promise<void>
   searchProfiles: (query: string) => Promise<MemberProfileSuggestion[]>
+  submitCreateProfileRequest?: (drexelUserId: string, displayName: string, skillLevel: SkillLevel) => Promise<void>
+  findMemberByDrexelUserId?: (drexelUserId: string) => Promise<MemberProfile | null>
+  submitDeviceLinkRequest?: (drexelUserId: string) => Promise<void>
+  submitSkillChangeRequest?: (skillLevel: SkillLevel) => Promise<void>
   requestProfileLink: (playerId: string) => Promise<void>
   getProfileLinkRequest: () => Promise<ProfileLinkRequest | null>
   subscribe: (
@@ -111,6 +130,7 @@ function buildSnapshot(
   ownPlayerId: string | null,
   profile: MemberProfile | null,
   profileLinkRequest: ProfileLinkRequest | null,
+  memberRequest: MemberRequest | null,
 ): MemberSnapshot {
   const players = new Map(playerRows.map((player) => [player.id, player]))
   const sessionPlayers = new Map(
@@ -212,6 +232,7 @@ function buildSnapshot(
     queue,
     courts,
     profileLinkRequest,
+    memberRequest,
   }
 }
 
@@ -236,7 +257,7 @@ export function createSupabaseMemberService(
     },
 
     async loadSnapshot(userId) {
-      const [sessionResult, courtsResult, identityResult, linkRequestResult] = await Promise.all([
+      const [sessionResult, courtsResult, identityResult, memberRequestResult] = await Promise.all([
         client
           .from('club_sessions')
           .select('*')
@@ -250,24 +271,27 @@ export function createSupabaseMemberService(
           .select('player_id')
           .eq('auth_user_id', userId)
           .maybeSingle(),
-        client.rpc('get_my_profile_link_request'),
+        client.rpc('get_my_member_request'),
       ])
 
       throwIfError(sessionResult.error)
       throwIfError(courtsResult.error)
       throwIfError(identityResult.error)
-      throwIfError(linkRequestResult.error)
+      throwIfError(memberRequestResult.error)
 
       const session = sessionResult.data
       const courts = courtsResult.data ?? []
       const ownPlayerId = identityResult.data?.player_id ?? null
-      const latestRequest = linkRequestResult.data?.[0]
+      const latestRequest = null
+      const latestMemberRequest = memberRequestResult.data?.[0]
         ? {
-            id: linkRequestResult.data[0].id,
-            targetPlayerId: linkRequestResult.data[0].target_player_id,
-            status: linkRequestResult.data[0].status as ProfileLinkRequest['status'],
-            createdAt: linkRequestResult.data[0].created_at,
-            reviewedAt: linkRequestResult.data[0].reviewed_at,
+            id: memberRequestResult.data[0].id,
+            type: memberRequestResult.data[0].request_type,
+            status: memberRequestResult.data[0].status,
+            drexelUserId: memberRequestResult.data[0].drexel_user_id,
+            displayName: memberRequestResult.data[0].display_name,
+            requestedSkillLevel: memberRequestResult.data[0].requested_skill_level,
+            rejectionReason: memberRequestResult.data[0].rejection_reason,
           }
         : null
       const profileResult = ownPlayerId
@@ -281,6 +305,7 @@ export function createSupabaseMemberService(
       const profile = profileResult.data
         ? {
             id: profileResult.data.id,
+            drexelUserId: profileResult.data.drexel_user_id,
             displayName: profileResult.data.display_name,
             skillLevel: profileResult.data.skill_level,
           }
@@ -301,6 +326,7 @@ export function createSupabaseMemberService(
             })
             .filter((court) => court !== null),
           profileLinkRequest: latestRequest,
+          memberRequest: latestMemberRequest,
         }
       }
 
@@ -340,6 +366,7 @@ export function createSupabaseMemberService(
         ownPlayerId,
         profile,
         latestRequest,
+        latestMemberRequest,
       )
     },
 
@@ -373,6 +400,27 @@ export function createSupabaseMemberService(
       const { error } = await client.rpc('request_profile_link', {
         p_player_id: playerId,
       })
+      throwIfError(error)
+    },
+
+    async submitCreateProfileRequest(drexelUserId, displayName, skillLevel) {
+      const { error } = await client.rpc('submit_create_profile_request', {
+        p_drexel_user_id: drexelUserId, p_display_name: displayName, p_skill_level: skillLevel,
+      })
+      throwIfError(error)
+    },
+    async findMemberByDrexelUserId(drexelUserId) {
+      const { data, error } = await client.rpc('find_member_by_drexel_user_id', { p_drexel_user_id: drexelUserId })
+      throwIfError(error)
+      const member = data?.[0]
+      return member ? { id: member.player_id, drexelUserId, displayName: member.display_name, skillLevel: member.skill_level } : null
+    },
+    async submitDeviceLinkRequest(drexelUserId) {
+      const { error } = await client.rpc('submit_device_link_request', { p_drexel_user_id: drexelUserId })
+      throwIfError(error)
+    },
+    async submitSkillChangeRequest(skillLevel) {
+      const { error } = await client.rpc('submit_skill_change_request', { p_skill_level: skillLevel })
       throwIfError(error)
     },
 

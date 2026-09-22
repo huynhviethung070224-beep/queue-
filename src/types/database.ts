@@ -222,10 +222,54 @@ export type Database = {
         }
         Relationships: []
       }
+      member_requests: {
+        Row: {
+          auth_user_id: string
+          created_at: string
+          display_name: string | null
+          drexel_user_id: string
+          id: string
+          player_id: string | null
+          rejection_reason: string | null
+          request_type: Database['public']['Enums']['member_request_type']
+          requested_skill_level: Database['public']['Enums']['skill_level'] | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database['public']['Enums']['member_request_status']
+        }
+        Insert: {
+          auth_user_id: string
+          display_name?: string | null
+          drexel_user_id: string
+          id?: string
+          player_id?: string | null
+          rejection_reason?: string | null
+          request_type: Database['public']['Enums']['member_request_type']
+          requested_skill_level?: Database['public']['Enums']['skill_level'] | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database['public']['Enums']['member_request_status']
+        }
+        Update: {
+          auth_user_id?: string
+          display_name?: string | null
+          drexel_user_id?: string
+          id?: string
+          player_id?: string | null
+          rejection_reason?: string | null
+          request_type?: Database['public']['Enums']['member_request_type']
+          requested_skill_level?: Database['public']['Enums']['skill_level'] | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database['public']['Enums']['member_request_status']
+        }
+        Relationships: []
+      }
       players: {
         Row: {
           created_at: string
           display_name: string
+          drexel_user_id: string | null
           id: string
           is_archived: boolean
           skill_level: Database['public']['Enums']['skill_level']
@@ -234,6 +278,7 @@ export type Database = {
         Insert: {
           created_at?: string
           display_name: string
+          drexel_user_id?: string | null
           id?: string
           is_archived?: boolean
           skill_level: Database['public']['Enums']['skill_level']
@@ -242,6 +287,7 @@ export type Database = {
         Update: {
           created_at?: string
           display_name?: string
+          drexel_user_id?: string | null
           id?: string
           is_archived?: boolean
           skill_level?: Database['public']['Enums']['skill_level']
@@ -426,6 +472,37 @@ export type Database = {
           target_player_id: string
         }[]
       }
+      get_my_member_request: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          display_name: string | null
+          drexel_user_id: string
+          id: string
+          rejection_reason: string | null
+          request_type: Database['public']['Enums']['member_request_type']
+          requested_skill_level: Database['public']['Enums']['skill_level'] | null
+          status: Database['public']['Enums']['member_request_status']
+        }[]
+      }
+      find_member_by_drexel_user_id: {
+        Args: { p_drexel_user_id: string }
+        Returns: { display_name: string; player_id: string; skill_level: Database['public']['Enums']['skill_level'] }[]
+      }
+      submit_create_profile_request: {
+        Args: { p_display_name: string; p_drexel_user_id: string; p_skill_level: Database['public']['Enums']['skill_level'] }
+        Returns: string
+      }
+      submit_device_link_request: { Args: { p_drexel_user_id: string }; Returns: string }
+      submit_skill_change_request: { Args: { p_skill_level: Database['public']['Enums']['skill_level'] }; Returns: string }
+      list_member_requests_for_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string; current_skill_level: Database['public']['Enums']['skill_level'] | null; display_name: string | null;
+          drexel_user_id: string; id: string; player_id: string | null; request_type: Database['public']['Enums']['member_request_type']; requested_skill_level: Database['public']['Enums']['skill_level'] | null
+        }[]
+      }
+      admin_review_member_request: { Args: { p_approve: boolean; p_rejection_reason?: string | null; p_request_id: string }; Returns: undefined }
       list_profile_link_requests: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -460,6 +537,8 @@ export type Database = {
       match_status: 'called' | 'playing' | 'completed' | 'cancelled'
       queue_status: 'waiting' | 'called' | 'playing' | 'completed' | 'left' | 'removed'
       skill_level: 'beginner' | 'intermediate' | 'advanced'
+      member_request_status: 'pending' | 'approved' | 'rejected'
+      member_request_type: 'create_profile' | 'link_new_device' | 'change_skill_level'
     }
     CompositeTypes: {
       [_ in never]: never

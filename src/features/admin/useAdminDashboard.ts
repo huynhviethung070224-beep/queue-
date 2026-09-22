@@ -239,6 +239,16 @@ export function useAdminDashboard(service: AdminService | null, enabled: boolean
         () => requireService().reviewProfileLinkRequest(requestId, approve),
         `${displayName} ownership request ${approve ? 'approved' : 'rejected'}.`,
       ),
+    reviewMemberRequest: (requestId: string, approve: boolean, displayName: string) =>
+      runAction(
+        `member-request-${requestId}`,
+        () => {
+          const service = requireService()
+          if (!service.reviewMemberRequest) throw new Error('Member requests are unavailable.')
+          return service.reviewMemberRequest(requestId, approve)
+        },
+        `${displayName} request ${approve ? 'approved' : 'rejected'}.`,
+      ),
     deleteMember: (playerId: string, displayName: string) =>
       runAction(
         `delete-member-${playerId}`,

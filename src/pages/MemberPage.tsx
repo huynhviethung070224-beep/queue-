@@ -63,7 +63,7 @@ export function MemberPage({ service }: MemberPageProps) {
     )
   }
 
-  const { session, profile, member, profileLinkRequest, queuePosition, queue, courts } = memberQueue.snapshot
+  const { session, profile, member, memberRequest, queuePosition, queue, courts } = memberQueue.snapshot
   const lastUpdated = memberQueue.lastUpdatedAt?.toLocaleTimeString([], {
     hour: 'numeric',
     minute: '2-digit',
@@ -124,19 +124,6 @@ export function MemberPage({ service }: MemberPageProps) {
       {session ? (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
           <div>
-            {profile && profileLinkRequest?.status === 'approved' && !member && (
-              <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-950" role="status">
-                <p className="font-bold">Profile ready: {profile.displayName}</p>
-                <p className="mt-1 leading-5">An admin approved your access request. Join tonight&apos;s live queue when you are ready.</p>
-                <Button
-                  className="mt-3"
-                  disabled={memberQueue.isActionPending || isOffline}
-                  onClick={() => void memberQueue.joinQueue(profile.displayName, profile.skillLevel)}
-                >
-                  Join live queue
-                </Button>
-              </div>
-            )}
             {member ? (
               <PersonalStatusCard
                 player={member}
@@ -146,15 +133,7 @@ export function MemberPage({ service }: MemberPageProps) {
               />
             ) : (
               <>
-                <JoinQueueForm
-                  key={profile?.id ?? 'new-member-profile'}
-                  initialDisplayName={profile?.displayName}
-                  initialSkillLevel={profile?.skillLevel}
-                  onJoin={(displayName, skillLevel) => void memberQueue.joinQueue(displayName, skillLevel)}
-                  onSearchProfiles={memberQueue.searchProfiles}
-                  onRequestProfileLink={memberQueue.requestProfileLink}
-                  disabled={memberQueue.isActionPending || isOffline}
-                />
+                {profile ? <div className="card p-5 sm:p-6"><p className="eyebrow">Welcome back</p><h2 className="mt-1 text-xl font-bold text-navy-950">{profile.displayName}</h2><p className="mt-1 text-sm capitalize text-slate-600">{profile.skillLevel}</p><Button className="mt-5 w-full" disabled={memberQueue.isActionPending || isOffline} onClick={() => void memberQueue.joinQueue(profile.displayName, profile.skillLevel)}>Join queue</Button><fieldset className="mt-5"><legend className="form-label">Request skill level change</legend><div className="flex flex-wrap gap-2">{(['beginner', 'intermediate', 'advanced'] as const).filter((level) => level !== profile.skillLevel).map((level) => <Button key={level} type="button" variant="secondary" disabled={memberQueue.isActionPending || isOffline} onClick={() => void memberQueue.submitSkillChangeRequest(level)}>Change to {level}</Button>)}</div></fieldset></div> : memberRequest?.status === 'pending' ? <div className="card p-6" role="status"><h2 className="text-lg font-bold text-navy-950">Your profile is waiting for admin approval.</h2><p className="mt-2 text-sm text-slate-600">You cannot join the queue until an administrator approves this request.</p></div> : <JoinQueueForm onCreate={memberQueue.submitCreateProfileRequest} onFind={memberQueue.findMemberByDrexelUserId} onRequestAccess={memberQueue.submitDeviceLinkRequest} disabled={memberQueue.isActionPending || isOffline} />}
                 {profile && (
                   <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
                     <p className="font-semibold text-navy-950">Wrong profile?</p>

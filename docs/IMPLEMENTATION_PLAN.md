@@ -133,3 +133,12 @@ The Phase 2 owner-activation step was later completed against the linked test pr
 - [x] Prevent archived profiles from appearing in member search or joining new sessions.
 - [x] Apply migrations 10–11 and deploy the updated Worker.
 - [ ] Manually archive and restore a disposable member with the owner's admin account.
+
+## Drexel User ID onboarding follow-up
+
+- [x] Add append-only local migration for normalized unique Drexel User IDs and admin-reviewed member requests.
+- [x] Replace direct member profile creation with create-profile and device-link request UI.
+- [x] Require an approved device-linked profile before joining a queue.
+- [x] Add member/admin request UI and local automated coverage.
+- [ ] Apply migration 13 to Supabase and manually validate approval, rejection, cross-device linking, and two-admin races.
+- [ ] Deploy the new frontend only after the migration is applied and live checks pass.

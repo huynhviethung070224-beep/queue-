@@ -10,9 +10,9 @@ The configured club name is **Drexel Badminton Club**. Both names can be changed
 
 ### Member
 
-A member receives an anonymous Supabase Auth session rather than creating a visible account. They enter a display name and one of three skill levels: beginner, intermediate, or advanced.
+A member receives an anonymous Supabase Auth session rather than creating a visible account. The anonymous identity remembers an approved device; the long-lived member identity is a unique, normalized Drexel User ID. There is no member email, password, PIN, or magic-link login.
 
-Members can join the current open session, see their queue position and wait time, see games played, view the live queue and courts, leave while waiting, and recover their stable profile after refresh or a later session in the same browser origin. Before creating a profile, they can search old display names and see minimal skill/last-joined disambiguation. If they recognize an old profile, they can submit an ownership request; an administrator must verify the person and explicitly approve or reject the request before any identity is linked. After approval, the member browser shows a clear verification banner and an explicit **Join live queue** action. Selecting a name never attaches an existing profile automatically. Called and playing states must be prominent. Network interruption and reconnect states must be understandable.
+An unlinked device can submit a new Drexel User ID, display name, and skill level for admin approval, or enter an exact Drexel User ID to request access to an existing profile. An admin must approve profile creation, new-device linking, and skill-level changes. Approval atomically creates/updates the profile and links the requesting anonymous device. An approved device can later join with one action and does not re-enter identity fields. Drexel User IDs are never shown in the public queue, courts, or public Realtime state.
 
 Members cannot edit other players, change game counts, control courts or matches, or grant themselves admin access.
 

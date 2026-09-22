@@ -70,6 +70,13 @@ Never place the Supabase service-role key in frontend code or a `VITE_` variable
 - [Manual test checklist](docs/MANUAL_TEST_CHECKLIST.md)
 - [Security and concurrency review](docs/CONCURRENCY_REVIEW.md)
 
+## Drexel User ID onboarding
+
+Member profiles use a normalized unique Drexel User ID. Supabase Anonymous Auth remembers approved devices only. New profile creation, new-device access, and skill-level changes require an administrator to approve a request; members do not use passwords, email login, or PINs.
+
 ## Current limitations
 
-Cross-device profile linking now uses a pending request that an admin must explicitly approve or reject; it is not linked by selecting a name. The admin directory also provides confirmation-gated Delete and Archive/Restore actions. Delete is limited to duplicate profiles without history; Archive preserves match history, hides the profile from member search, and blocks new joins. The linked project has one authorized admin, so the new approval and cleanup flows, two-admin races, and the multi-court completion race still need manual verification. Cloudflare Production/Preview build variables and the Supabase Auth Site URL/Redirect URLs still require dashboard review. Browser identity from the retired old origin does not transfer to the new origin.
+The Drexel User ID migration is local and has not been applied or deployed yet. Existing players without a Drexel User ID remain usable on their already-approved device until an administrator assigns an ID in a future follow-up. The linked project has one authorized admin, so approval flows, two-admin races, and the multi-court completion race still need manual verification. Cloudflare Production/Preview build variables and the Supabase Auth Site URL/Redirect URLs still require dashboard review.
+# Drexel User ID onboarding
+
+Member profiles use a normalized unique Drexel User ID. Supabase Anonymous Auth remembers approved devices only. New profile creation, new-device access, and skill-level changes require an administrator to approve a request; members do not use passwords, email login, or PINs.

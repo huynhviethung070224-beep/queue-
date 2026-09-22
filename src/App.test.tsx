@@ -26,7 +26,7 @@ function snapshot(member: QueuePlayer | null = null): MemberSnapshot {
       openedAt: new Date().toISOString(),
       autoRequeue: true,
     },
-    profile: null,
+    profile: { id: 'player-current', drexelUserId: 'ih123', displayName: 'Ian H.', skillLevel: 'intermediate' },
     member,
     queuePosition: member ? 1 : null,
     queue: member ? [member] : [],
@@ -172,8 +172,7 @@ describe('application routes and major states', () => {
     const { service } = createMemberService()
     renderRoute('/', service)
 
-    await user.type(await screen.findByLabelText('Display name'), 'Ian H.')
-    await user.click(screen.getByRole('button', { name: 'Join queue' }))
+    await user.click(await screen.findByRole('button', { name: 'Join queue' }))
 
     expect(await screen.findByRole('heading', { name: 'Ian H.' })).toBeInTheDocument()
     expect(screen.getByText('Waiting')).toBeInTheDocument()

@@ -175,6 +175,32 @@ export function useMemberQueue(providedService?: MemberService) {
     }
   }
 
+  async function runProfileRequest(action: () => Promise<void>) {
+    if (!service || !userId || isActionPending) return
+    setIsActionPending(true); setError(null)
+    try { await action(); await loadSnapshot(userId) }
+    catch (requestError) { setError(getErrorMessage(requestError)); throw requestError }
+    finally { setIsActionPending(false) }
+  }
+
+  async function submitCreateProfileRequest(drexelUserId: string, displayName: string, skillLevel: SkillLevel) {
+    if (!service?.submitCreateProfileRequest) throw new Error('Profile requests are unavailable.')
+    await runProfileRequest(() => service.submitCreateProfileRequest!(drexelUserId, displayName, skillLevel))
+  }
+  async function findMemberByDrexelUserId(drexelUserId: string) {
+    if (!service || !userId) return null
+    if (!service.findMemberByDrexelUserId) throw new Error('Profile lookup is unavailable.')
+    return service.findMemberByDrexelUserId(drexelUserId)
+  }
+  async function submitDeviceLinkRequest(drexelUserId: string) {
+    if (!service?.submitDeviceLinkRequest) throw new Error('Profile requests are unavailable.')
+    await runProfileRequest(() => service.submitDeviceLinkRequest!(drexelUserId))
+  }
+  async function submitSkillChangeRequest(skillLevel: SkillLevel) {
+    if (!service?.submitSkillChangeRequest) throw new Error('Skill requests are unavailable.')
+    await runProfileRequest(() => service.submitSkillChangeRequest!(skillLevel))
+  }
+
   async function resetIdentity() {
     if (!service?.resetIdentity || isActionPending) return
     setIsActionPending(true)
@@ -203,6 +229,10 @@ export function useMemberQueue(providedService?: MemberService) {
     leaveQueue,
     searchProfiles,
     requestProfileLink,
+    submitCreateProfileRequest,
+    findMemberByDrexelUserId,
+    submitDeviceLinkRequest,
+    submitSkillChangeRequest,
     resetIdentity,
     retry: initialize,
   }

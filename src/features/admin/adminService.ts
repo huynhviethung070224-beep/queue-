@@ -49,6 +49,7 @@ export interface AdminMember {
   isArchived: boolean
   createdAt: string
   lastJoinedAt: string | null
+  drexelUserId?: string | null
 }
 
 export interface ProfileLinkRequest {
@@ -56,6 +57,16 @@ export interface ProfileLinkRequest {
   targetPlayerId: string
   targetDisplayName: string
   targetSkillLevel: SkillLevel
+  createdAt: string
+}
+export interface MemberRequest {
+  id: string
+  type: 'create_profile' | 'link_new_device' | 'change_skill_level'
+  playerId: string | null
+  drexelUserId: string
+  displayName: string
+  currentSkillLevel: SkillLevel | null
+  requestedSkillLevel: SkillLevel | null
   createdAt: string
 }
 
@@ -66,6 +77,7 @@ export interface AdminSnapshot {
   courts: AdminCourt[]
   members: AdminMember[]
   profileLinkRequests: ProfileLinkRequest[]
+  memberRequests?: MemberRequest[]
 }
 
 export interface AdminService {
@@ -94,6 +106,7 @@ export interface AdminService {
     durationSeconds: number,
   ) => Promise<void>
   reviewProfileLinkRequest: (requestId: string, approve: boolean) => Promise<void>
+  reviewMemberRequest?: (requestId: string, approve: boolean) => Promise<void>
   deleteMember: (playerId: string) => Promise<void>
   setMemberArchived: (playerId: string, archived: boolean) => Promise<void>
   subscribe: (
@@ -156,6 +169,7 @@ function mapAdminSnapshot(
   matchPlayerRows: MatchPlayerRow[],
   memberRows: Database['public']['Functions']['list_members_for_admin']['Returns'],
   linkRequestRows: Database['public']['Functions']['list_profile_link_requests']['Returns'],
+  memberRequestRows: Database['public']['Functions']['list_member_requests_for_admin']['Returns'],
 ): AdminSnapshot {
   const activeSessionRow = sessions.find((session) => session.status === 'open') ?? null
   const players = new Map(playerRows.map((player) => [player.id, player]))
@@ -251,6 +265,12 @@ function mapAdminSnapshot(
       targetSkillLevel: request.target_skill_level,
       createdAt: request.created_at,
     })),
+    memberRequests: memberRequestRows.map((request) => ({
+      id: request.id, type: request.request_type, playerId: request.player_id,
+      drexelUserId: request.drexel_user_id, displayName: request.display_name ?? 'Unknown member',
+      currentSkillLevel: request.current_skill_level, requestedSkillLevel: request.requested_skill_level,
+      createdAt: request.created_at,
+    })),
   }
 }
 
@@ -303,7 +323,7 @@ export function createSupabaseAdminService(
 
     async loadSnapshot() {
       await assertAuthorized()
-      const [sessionsResult, courtsResult, membersResult, linkRequestsResult] = await Promise.all([
+      const [sessionsResult, courtsResult, membersResult, memberRequestsResult] = await Promise.all([
         client
           .from('club_sessions')
           .select('*')
@@ -311,12 +331,12 @@ export function createSupabaseAdminService(
           .order('created_at', { ascending: false }),
         client.from('courts').select('*').order('number'),
         client.rpc('list_members_for_admin', { p_search: null }),
-        client.rpc('list_profile_link_requests'),
+        client.rpc('list_member_requests_for_admin'),
       ])
       throwIfError(sessionsResult.error)
       throwIfError(courtsResult.error)
       throwIfError(membersResult.error)
-      throwIfError(linkRequestsResult.error)
+      throwIfError(memberRequestsResult.error)
 
       const sessions = sessionsResult.data ?? []
       const activeSession = sessions.find((session) => session.status === 'open')
@@ -330,7 +350,8 @@ export function createSupabaseAdminService(
           [],
           [],
           membersResult.data ?? [],
-          linkRequestsResult.data ?? [],
+          [],
+          memberRequestsResult.data ?? [],
         )
       }
 
@@ -370,7 +391,8 @@ export function createSupabaseAdminService(
         matches.data ?? [],
         matchPlayers.data ?? [],
         membersResult.data ?? [],
-        linkRequestsResult.data ?? [],
+        [],
+        memberRequestsResult.data ?? [],
       )
     },
 
@@ -464,6 +486,10 @@ export function createSupabaseAdminService(
         p_request_id: requestId,
         p_approve: approve,
       })
+      throwIfError(error)
+    },
+    async reviewMemberRequest(requestId, approve) {
+      const { error } = await client.rpc('admin_review_member_request', { p_request_id: requestId, p_approve: approve })
       throwIfError(error)
     },
     async deleteMember(playerId) {

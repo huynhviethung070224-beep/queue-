@@ -21,6 +21,16 @@ Record the environment, browser, tester, date, and result. Historical Phase 1 it
 
 ## Member lifecycle after Phase 3
 
+## Drexel User ID approval onboarding
+
+- [ ] A new anonymous browser submits a valid Drexel User ID/profile request and cannot join before approval.
+- [ ] Admin approves a new-profile request; exactly one player and one device link are created.
+- [ ] A new device finds an existing profile only by its exact Drexel User ID, then remains blocked until approval.
+- [ ] Admin approval links the new device without creating or changing the existing player/payment/history.
+- [ ] A skill-change request changes the existing player only after approval.
+- [ ] `VH358` and `vh358` cannot create separate profiles.
+- [ ] A non-admin cannot list or review another member's request.
+
 - [ ] A new browser receives an anonymous session and joins once.
 - [ ] Double-clicking **Join queue** creates only one active entry.
 - [ ] Refresh while waiting restores the same player and queue entry.

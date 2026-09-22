@@ -18,7 +18,7 @@ import { AdminCourtCard } from '../features/admin/AdminCourtCard'
 import type { AdminCourt } from '../features/admin/adminService'
 import { EditPlayerDialog } from '../features/admin/EditPlayerDialog'
 import { MemberDirectory } from '../features/admin/MemberDirectory'
-import { ProfileLinkRequests } from '../features/admin/ProfileLinkRequests'
+import { MemberRequests } from '../features/admin/MemberRequests'
 import { RecommendationPanel } from '../features/admin/RecommendationPanel'
 import { useAdminDashboard } from '../features/admin/useAdminDashboard'
 import { WaitingPlayersTable } from '../features/admin/WaitingPlayersTable'
@@ -458,13 +458,11 @@ export function AdminDashboardPage() {
         onSetArchived={requestMemberArchive}
       />
 
-      <ProfileLinkRequests
-        requests={snapshot.profileLinkRequests}
+      <MemberRequests
+        requests={snapshot.memberRequests ?? []}
         disabled={actionDisabled}
         pendingAction={dashboard.pendingAction}
-        onReview={(requestId, approve, displayName) =>
-          void dashboard.reviewProfileLinkRequest(requestId, approve, displayName)
-        }
+        onReview={(requestId, approve, displayName) => void dashboard.reviewMemberRequest(requestId, approve, displayName)}
       />
 
       <ConfirmDialog
