@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react'
+import { Radio, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/ui/StatusBadge'
@@ -88,12 +88,15 @@ export function MemberDirectory({
             return (
               <li
                 key={member.id}
-                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between sm:px-6"
               >
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-slate-900">
-                    {member.displayName}
-                  </p>
+                <div className="min-w-0 sm:flex-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="truncate font-semibold text-slate-900">
+                      {member.displayName}
+                    </p>
+                    {member.isActive && <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-emerald-700" aria-label="Currently in live queue or match" title="Currently in live queue or match"><Radio aria-hidden="true" size={13} />Live</span>}
+                  </div>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <StatusBadge kind="skill" value={member.skillLevel} />
                     {president && <PresidentBadge />}
@@ -105,28 +108,30 @@ export function MemberDirectory({
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {!member.isArchived && <Button
-                    variant="secondary"
-                    disabled={disabled || pending || deleting || archiving}
-                    onClick={() => onSetPayment(member.id, member.displayName, !member.isPaid)}
-                  >
-                    {pending ? 'Saving…' : `Mark ${member.isPaid ? 'Unpaid' : 'Paid'}`}
-                  </Button>}
-                  {!member.isArchived && <Button
-                    variant="danger"
-                    disabled={disabled || pending || deleting || archiving}
-                    onClick={() => onDelete(member.id, member.displayName)}
-                  >
-                      {deleting ? 'Deleting…' : 'Permanently delete'}
-                  </Button>}
-                  <Button
-                    variant="ghost"
-                    disabled={disabled || pending || deleting || archiving}
-                    onClick={() => onSetArchived(member.id, member.displayName, !member.isArchived)}
-                  >
-                    {archiving ? 'Saving…' : member.isArchived ? 'Restore member' : 'Archive member'}
-                  </Button>
+                <div className="flex shrink-0 flex-col gap-2 sm:items-end" role="group" aria-label={`Actions for ${member.displayName}`}>
+                  <div className="flex flex-wrap gap-2 sm:justify-end">
+                    {!member.isArchived && <Button
+                      variant="secondary"
+                      disabled={disabled || pending || deleting || archiving}
+                      onClick={() => onSetPayment(member.id, member.displayName, !member.isPaid)}
+                    >
+                      {pending ? 'Saving…' : `Mark ${member.isPaid ? 'Unpaid' : 'Paid'}`}
+                    </Button>}
+                    {!member.isArchived && <Button
+                      variant="danger"
+                      disabled={disabled || member.isActive || pending || deleting || archiving}
+                      onClick={() => onDelete(member.id, member.displayName)}
+                    >
+                        {deleting ? 'Deleting…' : 'Permanently delete'}
+                    </Button>}
+                    <Button
+                      variant="ghost"
+                      disabled={disabled || member.isActive || pending || deleting || archiving}
+                      onClick={() => onSetArchived(member.id, member.displayName, !member.isArchived)}
+                    >
+                      {archiving ? 'Saving…' : member.isArchived ? 'Restore member' : 'Archive member'}
+                    </Button>
+                  </div>
                 </div>
               </li>
             )

@@ -12,7 +12,7 @@ The configured club name is **Drexel Badminton Club**. Both names can be changed
 
 A member receives an anonymous Supabase Auth session rather than creating a visible account. The anonymous identity remembers an approved device; the long-lived member identity is a unique, normalized Drexel User ID. There is no member email, password, PIN, or magic-link login.
 
-An unlinked device can submit a new Drexel User ID, display name, and skill level for admin approval, or enter an exact Drexel User ID to request access to an existing profile. An admin must approve profile creation, new-device linking, and skill-level changes. Approval atomically creates/updates the profile and links the requesting anonymous device. An approved device can later join with one action and does not re-enter identity fields. Drexel User IDs are never shown in the public queue, courts, or public Realtime state.
+An unlinked device can submit a new Drexel User ID, display name, and skill level for admin approval, or enter an exact Drexel User ID to request access to an existing profile. An admin must approve profile creation, device transfer, and skill-level changes. Each profile has one approved browser at a time. Approving a transfer atomically revokes the previous browser and links the requester, and transfer is blocked while that profile is active in the queue or a match. An approved device can later join with one action and does not re-enter identity fields. Drexel User IDs are never shown in the public queue, courts, or public Realtime state.
 
 Members cannot edit other players, change game counts, control courts or matches, or grant themselves admin access.
 

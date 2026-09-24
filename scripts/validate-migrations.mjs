@@ -312,6 +312,83 @@ assert.match(
   'The live-tested join RPC must use an unambiguous session-player conflict target.',
 )
 
+const latestJoinFix = migrations['20260922100000_fix_join_queue_returning_ambiguity.sql']
+assert.ok(latestJoinFix, 'The append-only join ambiguity fix migration must exist.')
+assert.match(
+  latestJoinFix,
+  /returns table \(queue_entry_id uuid, player_id uuid, session_id uuid, status public\.queue_status\)/i,
+  'The join RPC return type must remain compatible with the generated frontend type.',
+)
+assert.match(
+  latestJoinFix,
+  /returning queue_entries\.id, queue_entries\.status into current_queue_entry_id, current_queue_status/i,
+  'The join RPC must qualify INSERT RETURNING columns that conflict with output parameters.',
+)
+assert.match(
+  latestJoinFix,
+  /pg_advisory_xact_lock\(pg_catalog\.hashtextextended\(caller_id::text, 0\)\)/i,
+  'The join RPC must serialize concurrent requests from the same authenticated member.',
+)
+assert.doesNotMatch(
+  latestJoinFix,
+  /returning id, status into/i,
+  'The join RPC must never reintroduce ambiguous unqualified RETURNING columns.',
+)
+
+const memberAdminGrantFix = migrations['20260922110000_harden_member_admin_rpc_grants.sql']
+assert.ok(memberAdminGrantFix, 'The append-only member admin RPC grant fix must exist.')
+assert.match(
+  memberAdminGrantFix,
+  /revoke execute on function public\.list_members_for_admin\(text\) from public, anon, authenticated/i,
+  'The member directory RPC must not retain PostgreSQL default PUBLIC execute access.',
+)
+assert.match(
+  memberAdminGrantFix,
+  /grant execute on function public\.list_members_for_admin\(text\) to authenticated/i,
+  'Signed-in callers must retain access so the RPC can perform its database admin check.',
+)
+
+const deviceLinkFix = migrations['20260923090000_idempotent_device_profile_link.sql']
+assert.ok(deviceLinkFix, 'The append-only idempotent device-link migration must exist.')
+assert.match(
+  deviceLinkFix,
+  /if linked_player_id = target_id then\s+return target_id;/i,
+  'Requesting the profile already linked to this browser must be idempotent.',
+)
+assert.match(
+  deviceLinkFix,
+  /if linked_player_id is not null then\s+raise exception 'This browser is already linked to a different approved profile\./i,
+  'A browser linked to another member must not be silently reassigned.',
+)
+assert.match(
+  deviceLinkFix,
+  /pg_advisory_xact_lock\(pg_catalog\.hashtextextended\(caller::text, 0\)\)/i,
+  'Concurrent link requests from one browser identity must be serialized.',
+)
+
+const singleDeviceFix = migrations['20260923093000_single_device_profile_ownership.sql']
+assert.ok(singleDeviceFix, 'The append-only single-device ownership migration must exist.')
+assert.match(
+  singleDeviceFix,
+  /create unique index player_identities_one_device_per_player_idx\s+on public\.player_identities \(player_id\)/i,
+  'Each profile must have at most one approved browser identity.',
+)
+assert.match(
+  singleDeviceFix,
+  /delete from public\.player_identities[\s\S]*?auth_user_id <> request_row\.auth_user_id/i,
+  'Approving a new browser must revoke the previous browser link atomically.',
+)
+assert.match(
+  singleDeviceFix,
+  /queue_entries\.status in \('waiting', 'called', 'playing'\)[\s\S]*?Transfer access after the member leaves/i,
+  'An active queue or match profile must not transfer to another browser.',
+)
+assert.match(
+  singleDeviceFix,
+  /requesting_player_id is distinct from target_id[\s\S]*?requesting browser no longer controls this profile/i,
+  'A revoked browser must not retain authority to change member skill.',
+)
+
 assert.doesNotMatch(
   combinedSql,
   /service[_-]?role\s*(?:key|=)/i,

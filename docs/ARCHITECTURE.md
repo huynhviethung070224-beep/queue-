@@ -27,7 +27,7 @@ React + React Router
 - Supabase-generated-shape database types live in `src/types/database.ts`.
 - `src/lib/supabase.ts` lazily creates typed member and admin browser clients with separate Auth storage keys, so staff sign-in cannot replace an anonymous member identity in the same browser.
 - `src/features/member/memberService.ts` owns member Auth, reads, RPC calls, mapping, and one focused Realtime channel behind a mockable interface.
-- `players.drexel_user_id` is the unique long-lived member identifier; `member_requests` stores pending create-profile, device-link, and skill-change approval work. Anonymous Auth identities are device links in `player_identities`, not the member identity itself.
+- `players.drexel_user_id` is the unique long-lived member identifier; `member_requests` stores pending create-profile, device-transfer, and skill-change approval work. `player_identities` permits one approved anonymous Auth browser per player. An approved transfer atomically revokes the previous browser and is denied while the player is active in a queue or match.
 - `src/features/member/useMemberQueue.ts` owns loading/action state, subscription cleanup, offline detection, reconnect refetching, and live wait-time display.
 - `src/features/admin/adminService.ts` owns email/password Auth, database membership checks, admin reads, RPC calls, data mapping, and one focused Realtime channel.
 - `src/features/auth/AdminAuthContext.tsx` restores the admin session, follows Auth events, and exposes protected-route state without treating client state as authorization.

@@ -26,7 +26,9 @@ Record the environment, browser, tester, date, and result. Historical Phase 1 it
 - [ ] A new anonymous browser submits a valid Drexel User ID/profile request and cannot join before approval.
 - [ ] Admin approves a new-profile request; exactly one player and one device link are created.
 - [ ] A new device finds an existing profile only by its exact Drexel User ID, then remains blocked until approval.
-- [ ] Admin approval links the new device without creating or changing the existing player/payment/history.
+- [ ] Admin approval transfers the existing profile without changing player/payment/history and removes access from the previous browser.
+- [ ] A transfer is rejected while the member is waiting, called, or playing, then succeeds after the active state ends.
+- [ ] After legacy cleanup and every later approval, each player has at most one `player_identities` row.
 - [ ] A skill-change request changes the existing player only after approval.
 - [ ] `VH358` and `vh358` cannot create separate profiles.
 - [ ] A non-admin cannot list or review another member's request.
@@ -179,3 +181,19 @@ Built, migrated, and directly deployed on 2026-09-21; the feedback worktree rema
 - [x] The deployed member UI shows existing-profile suggestions and the new **Request ownership** action without linking by name.
 - [ ] Credentialed admin directory/payment/countdown controls still require the owner's admin password for production browser verification.
 - [ ] Cloudflare Production/Preview Git-build variables and Supabase Site URL/Redirect URLs still require dashboard verification.
+
+## Supabase error remediation record
+
+Completed on 2026-09-22 against the linked project with all test writes wrapped in transactions and rolled back:
+
+- [x] Postgres logs identified the historical `join_current_queue` failures as SQLSTATE `42702`: three failures from the unqualified open-session `status` lookup and four from `returning id, status`.
+- [x] No SQLSTATE `42702` or matching ambiguous-status error appears after migration `20260922100000_fix_join_queue_returning_ambiguity`.
+- [x] Joining twice as one approved member returns the same active queue entry; leaving clears that active state.
+- [x] Four temporary waiting members can be assigned atomically to a court and a cancelled call restores all four to waiting; the transaction rollback left no test rows.
+- [x] All 12 live public tables have RLS enabled, and the three active-state unique indexes exist.
+- [x] Migration `20260922110000_harden_member_admin_rpc_grants` removed accidental `anon`/`PUBLIC` execution of `list_members_for_admin`; only authenticated, service-role, and owner execution remain.
+- [x] The deployed client validates a stored anonymous Auth session before protected reads and replaces only sessions confirmed invalid.
+- [x] Admin member controls visibly disable archive/delete while a member has an active queue or match state.
+- [x] The deployed home page and direct `/admin` refresh return HTTP 200 on `https://badminton.drexel-queue.workers.dev`.
+- [ ] A genuine two-connection simultaneous join/assignment stress test remains manual because Docker was unavailable and the rollback fixtures used one database connection.
+- [ ] Historical dashboard error counts remain visible until their selected log window expires; they cannot and should not be deleted.

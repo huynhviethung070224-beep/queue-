@@ -140,5 +140,8 @@ The Phase 2 owner-activation step was later completed against the linked test pr
 - [x] Replace direct member profile creation with create-profile and device-link request UI.
 - [x] Require an approved device-linked profile before joining a queue.
 - [x] Add member/admin request UI and local automated coverage.
-- [ ] Apply migration 13 to Supabase and manually validate approval, rejection, cross-device linking, and two-admin races.
+- [x] Add local single-device ownership enforcement with admin-approved transfer and active-queue protection.
+- [ ] Apply migrations 18–19 and verify same-profile idempotency, legacy-link cleanup, transfer, and old-browser revocation.
+- [x] Apply migration 13 to Supabase.
+- [ ] Manually validate approval, rejection, device transfer, and two-admin races.
 - [ ] Deploy the new frontend only after the migration is applied and live checks pass.

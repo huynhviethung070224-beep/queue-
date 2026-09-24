@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Database } from '../../types/database'
 import { createSupabaseMemberService } from './memberService'
 
-function authClient(sessionUserId: string | null) {
+function authClient(
+  sessionUserId: string | null,
+  userError: { message: string; name: string; status: number } | null = null,
+) {
   const getSession = vi.fn(async () => ({
     data: {
       session: sessionUserId ? { user: { id: sessionUserId } } : null,
@@ -14,26 +17,74 @@ function authClient(sessionUserId: string | null) {
     data: { user: { id: 'new-anonymous-user' } },
     error: null,
   }))
+  const getUser = vi.fn(async () => ({
+    data: { user: sessionUserId && !userError ? { id: sessionUserId } : null },
+    error: userError,
+  }))
+  const signOut = vi.fn(async () => ({ error: null }))
   const rpc = vi.fn(
-    async (): Promise<{ data: unknown; error: null }> => ({ data: null, error: null }),
+    async (name: string): Promise<{ data: unknown; error: null }> => ({
+      data: name === 'join_current_queue'
+        ? [{ queue_entry_id: 'queue-1', player_id: 'player-1', session_id: 'session-1', status: 'waiting' }]
+        : null,
+      error: null,
+    }),
   )
   const client = {
-    auth: { getSession, signInAnonymously },
+    auth: { getSession, getUser, signInAnonymously, signOut },
     rpc,
   } as unknown as SupabaseClient<Database>
 
-  return { client, getSession, signInAnonymously, rpc }
+  return { client, getSession, getUser, signInAnonymously, signOut, rpc }
 }
 
 describe('Supabase member service', () => {
   it('restores an existing browser session without creating another anonymous user', async () => {
-    const { client, getSession, signInAnonymously } = authClient('existing-user')
+    const { client, getSession, getUser, signInAnonymously } = authClient('existing-user')
 
     await expect(createSupabaseMemberService(client).ensureAuthenticated()).resolves.toBe(
       'existing-user',
     )
     expect(getSession).toHaveBeenCalledOnce()
+    expect(getUser).toHaveBeenCalledOnce()
     expect(signInAnonymously).not.toHaveBeenCalled()
+  })
+
+  it('replaces a stale anonymous session before loading protected member data', async () => {
+    const { client, signInAnonymously, signOut } = authClient('deleted-user', {
+      message: 'User from sub claim in JWT does not exist',
+      name: 'AuthApiError',
+      status: 403,
+    })
+
+    await expect(createSupabaseMemberService(client).ensureAuthenticated()).resolves.toBe(
+      'new-anonymous-user',
+    )
+    expect(signOut).toHaveBeenCalledWith({ scope: 'local' })
+    expect(signInAnonymously).toHaveBeenCalledOnce()
+  })
+
+  it('does not replace a valid identity for a retryable auth failure', async () => {
+    const { client, signInAnonymously, signOut } = authClient('existing-user', {
+      message: 'Network request failed',
+      name: 'AuthRetryableFetchError',
+      status: 0,
+    })
+
+    await expect(createSupabaseMemberService(client).ensureAuthenticated()).rejects.toThrow(
+      'Network request failed',
+    )
+    expect(signOut).not.toHaveBeenCalled()
+    expect(signInAnonymously).not.toHaveBeenCalled()
+  })
+
+  it('rejects a join response that omits the authoritative queue entry', async () => {
+    const { client, rpc } = authClient('existing-user')
+    rpc.mockResolvedValueOnce({ data: [], error: null })
+
+    await expect(
+      createSupabaseMemberService(client).joinQueue('Ian H.', 'intermediate'),
+    ).rejects.toThrow('did not return the authoritative queue entry')
   })
 
   it('creates an anonymous user only when no stored session exists', async () => {
@@ -87,6 +138,36 @@ describe('Supabase member service', () => {
     expect(rpc).toHaveBeenCalledWith('search_member_profiles', {
       p_query: 'Ian',
     })
+  })
+
+  it('treats the already-linked target profile as an idempotent access request', async () => {
+    const rpc = vi.fn(async (name: string) => name === 'submit_device_link_request'
+      ? { data: null, error: { code: '23514', message: 'This device already has an approved profile.' } }
+      : { data: [{ player_id: 'player-existing', display_name: 'Minh Duong', skill_level: 'advanced' }], error: null })
+    const maybeSingle = vi.fn(async () => ({ data: { player_id: 'player-existing' }, error: null }))
+    const client = {
+      rpc,
+      from: vi.fn(() => ({ select: vi.fn(() => ({ maybeSingle })) })),
+    } as unknown as SupabaseClient<Database>
+
+    await expect(
+      createSupabaseMemberService(client).submitDeviceLinkRequest?.('mvd38'),
+    ).resolves.toBeUndefined()
+  })
+
+  it('keeps blocking access when the browser belongs to a different profile', async () => {
+    const rpc = vi.fn(async (name: string) => name === 'submit_device_link_request'
+      ? { data: null, error: { code: '23514', message: 'This device already has an approved profile.' } }
+      : { data: [{ player_id: 'requested-player', display_name: 'Minh Duong', skill_level: 'advanced' }], error: null })
+    const maybeSingle = vi.fn(async () => ({ data: { player_id: 'different-player' }, error: null }))
+    const client = {
+      rpc,
+      from: vi.fn(() => ({ select: vi.fn(() => ({ maybeSingle })) })),
+    } as unknown as SupabaseClient<Database>
+
+    await expect(
+      createSupabaseMemberService(client).submitDeviceLinkRequest?.('mvd38'),
+    ).rejects.toThrow('This browser is already linked to a different approved profile.')
   })
 
   it('owns one filtered live channel and removes it during cleanup', () => {

@@ -47,6 +47,7 @@ export interface AdminMember {
   skillLevel: SkillLevel
   isPaid: boolean
   isArchived: boolean
+  isActive: boolean
   createdAt: string
   lastJoinedAt: string | null
   drexelUserId?: string | null
@@ -186,6 +187,7 @@ function mapAdminSnapshot(
   }
   const duplicateIndexes = new Map<string, number>()
   const payments = new Map(memberRows.map((member) => [member.player_id, member.is_paid]))
+  const activePlayerIds = new Set(queueRows.map((entry) => entry.player_id))
 
   const waitingPlayers = waitingRows
     .map((entry): AdminQueuePlayer | null => {
@@ -255,6 +257,7 @@ function mapAdminSnapshot(
       skillLevel: member.skill_level,
       isPaid: member.is_paid,
       isArchived: member.is_archived,
+      isActive: activePlayerIds.has(member.player_id),
       createdAt: member.created_at,
       lastJoinedAt: member.last_joined_at,
     })),

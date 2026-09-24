@@ -88,6 +88,10 @@ function throwIfError(error: { message: string } | null) {
   if (error) throw new Error(error.message)
 }
 
+function isInvalidStoredSession(error: { name?: string; status?: number }) {
+  return error.name === 'AuthSessionMissingError' || [400, 401, 403].includes(error.status ?? 0)
+}
+
 function minutesSince(timestamp: string, now = Date.now()) {
   return Math.max(0, Math.floor((now - new Date(timestamp).getTime()) / 60_000))
 }
@@ -243,7 +247,13 @@ export function createSupabaseMemberService(
     async ensureAuthenticated() {
       const { data, error } = await client.auth.getSession()
       throwIfError(error)
-      if (data.session?.user.id) return data.session.user.id
+      if (data.session?.user.id) {
+        const { data: userData, error: userError } = await client.auth.getUser()
+        if (!userError && userData.user?.id) return userData.user.id
+        if (userError && !isInvalidStoredSession(userError)) throwIfError(userError)
+        const { error: signOutError } = await client.auth.signOut({ scope: 'local' })
+        throwIfError(signOutError)
+      }
 
       const { data: signInData, error: signInError } = await client.auth.signInAnonymously()
       throwIfError(signInError)
@@ -371,11 +381,12 @@ export function createSupabaseMemberService(
     },
 
     async joinQueue(displayName, skillLevel) {
-      const { error } = await client.rpc('join_current_queue', {
+      const { data, error } = await client.rpc('join_current_queue', {
         p_display_name: displayName,
         p_skill_level: skillLevel,
       })
       throwIfError(error)
+      if (!data?.[0]) throw new Error('Queue join did not return the authoritative queue entry.')
     },
 
     async leaveQueue() {
@@ -417,6 +428,21 @@ export function createSupabaseMemberService(
     },
     async submitDeviceLinkRequest(drexelUserId) {
       const { error } = await client.rpc('submit_device_link_request', { p_drexel_user_id: drexelUserId })
+      if (error?.code === '23514') {
+        const [targetResult, identityResult] = await Promise.all([
+          client.rpc('find_member_by_drexel_user_id', { p_drexel_user_id: drexelUserId }),
+          client.from('player_identities').select('player_id').maybeSingle(),
+        ])
+        throwIfError(targetResult.error)
+        throwIfError(identityResult.error)
+        if (
+          targetResult.data?.[0]?.player_id &&
+          targetResult.data[0].player_id === identityResult.data?.player_id
+        ) return
+        throw new Error(
+          'This browser is already linked to a different approved profile. Use a different profile first.',
+        )
+      }
       throwIfError(error)
     },
     async submitSkillChangeRequest(skillLevel) {
