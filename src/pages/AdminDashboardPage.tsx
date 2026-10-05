@@ -304,12 +304,12 @@ export function AdminDashboardPage() {
         </div>
       )}
 
-      <section className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      <section className="flex flex-col gap-4 rounded-3xl border border-white/80 bg-white/90 p-6 shadow-[0_12px_40px_rgba(11,31,51,0.06)] xl:flex-row xl:items-end xl:justify-between">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
             <Radio aria-hidden="true" size={15} /> Database-authorized admin · {auth.email}
           </div>
-          <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-navy-950 sm:text-3xl">
+          <h1 className="mt-2 text-2xl font-extrabold text-navy-950 sm:text-3xl">
             Club night control desk
           </h1>
           <p className="mt-2 text-sm text-slate-600">
@@ -401,9 +401,9 @@ export function AdminDashboardPage() {
       {activeSession && (
         <>
           <section className="grid gap-4 sm:grid-cols-3" aria-label="Session summary">
-            <div className="card p-5"><CalendarClock aria-hidden="true" className="text-emerald-600" size={20} /><p className="mt-3 text-xs text-slate-500">Session</p><p className="mt-1 font-bold text-navy-950">Open</p></div>
-            <div className="card p-5"><Users aria-hidden="true" className="text-violet-600" size={20} /><p className="mt-3 text-xs text-slate-500">Waiting</p><p className="mt-1 font-bold text-navy-950">{players.length} players</p></div>
-            <label className="card flex cursor-pointer items-center justify-between gap-4 p-5"><span><span className="block text-xs text-slate-500">When ending a match</span><span className="mt-1 block font-bold text-navy-950">Requeue those players</span></span><input type="checkbox" disabled={actionDisabled} checked={requeuePlayers} onChange={(event) => setRequeueOverride(event.target.checked)} className="size-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600" /></label>
+            <div className="card border-t-4 border-t-emerald-500 p-5"><CalendarClock aria-hidden="true" className="text-emerald-600" size={20} /><p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Session</p><p className="mt-1 text-lg font-bold text-navy-950">Open</p></div>
+            <div className="card border-t-4 border-t-violet-500 p-5"><Users aria-hidden="true" className="text-violet-600" size={20} /><p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Waiting</p><p className="mt-1 text-lg font-bold text-navy-950">{players.length} players</p></div>
+            <label className="card flex cursor-pointer items-center justify-between gap-4 border-t-4 border-t-amber-400 p-5"><span><span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">When ending a match</span><span className="mt-1 block text-lg font-bold text-navy-950">Requeue those players</span></span><input type="checkbox" disabled={actionDisabled} checked={requeuePlayers} onChange={(event) => setRequeueOverride(event.target.checked)} className="size-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600" /></label>
           </section>
 
           <section aria-labelledby="court-management-title">

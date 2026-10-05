@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 
 export function NotFoundPage() {
   return (
-    <section className="mx-auto max-w-xl py-20 text-center">
-      <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-slate-200 text-slate-600">
+    <section className="card mx-auto max-w-xl px-6 py-16 text-center sm:px-10">
+      <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-700">
         <MapPinOff aria-hidden="true" size={28} />
       </span>
       <p className="eyebrow mt-6">404 · Out of bounds</p>

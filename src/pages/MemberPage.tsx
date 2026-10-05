@@ -99,26 +99,32 @@ export function MemberPage({ service }: MemberPageProps) {
         </div>
       )}
 
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="mb-3 flex items-center gap-2">
-            <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ${session ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}`}>
-              <span className={`size-2 rounded-full ${session ? 'bg-emerald-500' : 'bg-slate-400'}`} aria-hidden="true" />
-              {session ? 'Session open' : 'No open session'}
-            </span>
+      <section className="relative overflow-hidden rounded-3xl border border-white/80 bg-white/90 p-6 shadow-[0_12px_40px_rgba(11,31,51,0.06)] sm:p-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_80%_20%,rgba(16,185,129,0.2),transparent_58%)]"
+        />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ${session ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}`}>
+                <span className={`size-2 rounded-full ${session ? 'bg-emerald-500' : 'bg-slate-400'}`} aria-hidden="true" />
+                {session ? 'Session open' : 'No open session'}
+              </span>
+            </div>
+            <h1 className="text-2xl font-extrabold text-navy-950 sm:text-3xl">
+              {session?.name ?? 'Club night is not open yet'}
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+              {session
+                ? 'Fewer games and longer rest move players forward. Skill is used only to create comfortable matches.'
+                : 'An administrator needs to open a session before members can join the queue.'}
+            </p>
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-navy-950 sm:text-3xl">
-            {session?.name ?? 'Club night is not open yet'}
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-            {session
-              ? 'Fewer games and longer rest move players forward. Skill is used only to create comfortable matches.'
-              : 'An administrator needs to open a session before members can join the queue.'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-          <Radio aria-hidden="true" className="text-emerald-600" size={16} />
-          {lastUpdated ? `Updated ${lastUpdated}` : 'Waiting for live data'}
+          <div className="flex items-center gap-2 self-start rounded-full bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 sm:self-auto">
+            <Radio aria-hidden="true" className="text-emerald-600" size={16} />
+            {lastUpdated ? `Updated ${lastUpdated}` : 'Waiting for live data'}
+          </div>
         </div>
       </section>
 

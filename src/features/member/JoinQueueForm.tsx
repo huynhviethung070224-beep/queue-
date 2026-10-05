@@ -2,6 +2,12 @@ import { Search, UserPlus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Button } from '../../components/ui/Button'
 import type { SkillLevel } from '../../types/domain'
+
+const selectedSkillClass: Record<SkillLevel, string> = {
+  beginner: 'border-sky-600 bg-sky-50 text-sky-800',
+  intermediate: 'border-violet-600 bg-violet-50 text-violet-800',
+  advanced: 'border-amber-500 bg-amber-50 text-amber-900',
+}
 import type { MemberProfile } from './memberService'
 
 interface JoinQueueFormProps {
@@ -38,7 +44,7 @@ export function JoinQueueForm({ disabled = false, onCreate, onFind, onRequestAcc
     <div className="mb-5 flex gap-2"><Button type="button" variant={mode === 'find' ? 'primary' : 'secondary'} onClick={() => { setMode('find'); setError(''); setFoundProfile(null); setHasSearched(false) }}>Find my profile</Button><Button type="button" variant={mode === 'create' ? 'primary' : 'secondary'} onClick={() => { setMode('create'); setError(''); setFoundProfile(null); setHasSearched(false) }}>Create new profile</Button></div>
     <form onSubmit={(event) => void submit(event)} noValidate className="space-y-5">
       <div><label htmlFor="drexel-user-id" className="form-label">Drexel User ID</label><input id="drexel-user-id" className="form-control" value={drexelUserId} onChange={(event) => setDrexelUserId(event.target.value)} placeholder="For example, abc123" autoCapitalize="none" autoCorrect="off" required /></div>
-      {mode === 'create' && <><div><label htmlFor="display-name" className="form-label">Display name</label><input id="display-name" className="form-control" value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={40} required /></div><fieldset><legend className="form-label">Skill level</legend><div className="grid grid-cols-1 gap-2 sm:grid-cols-3">{(['beginner','intermediate','advanced'] as SkillLevel[]).map((level) => <label key={level} className={`cursor-pointer rounded-xl border px-3 py-3 text-center text-sm font-semibold capitalize ${skillLevel === level ? 'border-emerald-600 bg-emerald-50 text-emerald-800' : 'border-slate-200 text-slate-600'}`}><input type="radio" name="skillLevel" value={level} checked={skillLevel === level} onChange={() => setSkillLevel(level)} className="sr-only" />{level}</label>)}</div></fieldset></>}
+      {mode === 'create' && <><div><label htmlFor="display-name" className="form-label">Display name</label><input id="display-name" className="form-control" value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={40} required /></div><fieldset><legend className="form-label">Skill level</legend><div className="grid grid-cols-1 gap-2 sm:grid-cols-3">{(['beginner','intermediate','advanced'] as SkillLevel[]).map((level) => <label key={level} className={`cursor-pointer rounded-xl border px-3 py-3 text-center text-sm font-semibold capitalize focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-emerald-600 ${skillLevel === level ? selectedSkillClass[level] : 'border-slate-200 bg-white text-slate-600'}`}><input type="radio" name="skillLevel" value={level} checked={skillLevel === level} onChange={() => setSkillLevel(level)} className="sr-only" />{level}</label>)}</div></fieldset></>}
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
       <Button type="submit" disabled={disabled || busy} className="w-full">{busy ? 'Submitting…' : mode === 'create' ? 'Submit for approval' : 'Find profile'}</Button>
     </form>

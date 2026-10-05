@@ -30,9 +30,12 @@ export function LiveQueueList({ players }: LiveQueueListProps) {
       ) : (
         <ol className="divide-y divide-slate-100">
           {players.map((player, index) => (
-            <li key={player.id} className="flex items-center gap-3 px-5 py-4 sm:px-6">
+            <li
+              key={player.id}
+              className={`flex items-center gap-3 px-5 py-4 sm:px-6 ${index === 0 ? 'bg-emerald-50/80' : ''}`}
+            >
               <span
-                className="grid size-8 shrink-0 place-items-center rounded-full bg-navy-950 text-sm font-bold text-white"
+                className={`grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold text-white ${index === 0 ? 'bg-emerald-600' : 'bg-navy-950'}`}
                 aria-label={`Queue position ${index + 1}`}
               >
                 {index + 1}
@@ -42,6 +45,11 @@ export function LiveQueueList({ players }: LiveQueueListProps) {
                   <span className="truncate font-semibold text-slate-900">
                     {player.displayName}
                   </span>
+                  {index === 0 && (
+                    <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                      Next
+                    </span>
+                  )}
                   {isPresident(player.displayName) && <PresidentBadge />}
                   {player.duplicateSuffix && (
                     <span className="text-xs text-slate-500">{player.duplicateSuffix}</span>

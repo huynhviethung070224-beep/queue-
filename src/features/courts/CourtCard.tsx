@@ -2,6 +2,7 @@ import { Clock3, MapPin, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { getCourtDisplayName } from '../../config/app'
+import { getCourtAccent } from './courtAppearance'
 import type { Court } from '../../types/domain'
 import {
   formatRemainingMatchTime,
@@ -33,14 +34,17 @@ export function CourtCard({ court }: CourtCardProps) {
     }
   }, [court.matchDurationSeconds, court.matchStartedAt, court.status])
 
+  const accent = getCourtAccent(court.number)
+
   return (
     <article
-      className="card p-5"
+      className="card relative overflow-hidden p-5"
       aria-label={`${getCourtDisplayName(court.number)}: ${court.status}`}
     >
+      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${accent.stripe}`} />
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-xl bg-slate-100 text-navy-950">
+          <span className={`grid size-10 place-items-center rounded-xl ${accent.icon}`}>
             <MapPin aria-hidden="true" size={20} />
           </span>
           <h3 className="font-bold text-navy-950">{getCourtDisplayName(court.number)}</h3>

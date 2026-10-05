@@ -57,26 +57,26 @@ export function PersonalStatusCard({
           </div>
         </div>
 
-        <dl className="mt-6 grid grid-cols-3 divide-x divide-slate-200 rounded-xl bg-slate-50 py-4 text-center">
-          <div className="px-2">
+        <dl className="mt-6 grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-xl bg-slate-50 px-2 py-3 ring-1 ring-slate-200/80">
             <dt className="text-xs text-slate-500">Position</dt>
-            <dd className="mt-1 text-lg font-bold text-navy-950">
+            <dd className="mt-1 font-display text-xl font-bold text-navy-950">
               {position ? `#${position}` : '—'}
             </dd>
           </div>
-          <div className="px-2">
+          <div className="rounded-xl bg-slate-50 px-2 py-3 ring-1 ring-slate-200/80">
             <dt className="flex items-center justify-center gap-1 text-xs text-slate-500">
               <Clock3 aria-hidden="true" size={13} /> Wait
             </dt>
-            <dd className="mt-1 text-lg font-bold text-navy-950">
+            <dd className="mt-1 text-xl font-bold text-navy-950">
               {player.waitMinutes}m
             </dd>
           </div>
-          <div className="px-2">
+          <div className="rounded-xl bg-slate-50 px-2 py-3 ring-1 ring-slate-200/80">
             <dt className="flex items-center justify-center gap-1 text-xs text-slate-500">
               <Trophy aria-hidden="true" size={13} /> Games
             </dt>
-            <dd className="mt-1 text-lg font-bold text-navy-950">
+            <dd className="mt-1 text-xl font-bold text-navy-950">
               {player.gamesPlayed}
             </dd>
           </div>

@@ -51,20 +51,23 @@ export function AdminLoginPage() {
   }
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-8 py-4 lg:grid-cols-2 lg:items-center lg:py-12">
-      <section>
-        <p className="eyebrow">Authorized staff only</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-navy-950 sm:text-4xl">
+    <div className="mx-auto grid max-w-5xl gap-8 py-4 lg:grid-cols-2 lg:items-stretch lg:py-8">
+      <section className="court-panel relative overflow-hidden rounded-3xl p-8 text-white sm:p-10">
+        <p className="text-xs font-bold uppercase tracking-wider text-emerald-300">Authorized staff only</p>
+        <h1 className="mt-3 max-w-md text-3xl font-extrabold text-white sm:text-4xl">
           Keep club night moving fairly.
         </h1>
-        <p className="mt-4 max-w-lg leading-7 text-slate-600">
+        <p className="mt-4 max-w-lg leading-7 text-slate-200">
           Sign in with the email/password account created in Supabase Auth. The account
           must also be linked in the database administrator allowlist.
         </p>
-        <div className="mt-6 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-950">
-          <ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0" size={19} />
-          Authentication identifies the account; every protected RPC independently
-          rechecks <code>admin_users</code> before changing club state.
+        <div className="mt-6 flex items-start gap-3 rounded-xl border border-white/15 bg-white/8 p-4 text-sm leading-6 text-emerald-50">
+          <ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0 text-emerald-300" size={19} />
+          <p>
+            Authentication identifies the account; every protected RPC independently
+            rechecks <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.92em]">admin_users</code> before
+            changing club state.
+          </p>
         </div>
       </section>
 

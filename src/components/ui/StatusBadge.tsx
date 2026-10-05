@@ -38,8 +38,9 @@ export function StatusBadge({ value, kind }: BadgeProps) {
 
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${style}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${style}`}
     >
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
       {labelMap[value]}
     </span>
   )
